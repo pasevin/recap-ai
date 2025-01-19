@@ -14,6 +14,8 @@ export default class Linear extends Command {
     '$ recap linear --timeframe 2w',
     '$ recap linear --since 2024-01-01 --until 2024-01-31',
     '$ recap linear --assignee johndoe --state open',
+    '$ recap linear --author janedoe --label bug',
+    '$ recap linear --author janedoe --timeframe 1m --format json',
   ];
 
   static flags = {
@@ -24,6 +26,7 @@ export default class Linear extends Command {
     timeframe: Flags.string({
       char: 'f',
       description: 'Timeframe to fetch data for (e.g., 1d, 1w, 1m, 1y)',
+      exclusive: ['since'],
     }),
     since: Flags.string({
       char: 's',
@@ -39,9 +42,22 @@ export default class Linear extends Command {
       char: 'a',
       description: 'Filter by assignee',
     }),
+    author: Flags.string({
+      description: 'Filter by issue creator',
+    }),
     state: Flags.string({
       description: 'Filter issues by state (open, closed, all)',
       options: ['open', 'closed', 'all'],
+    }),
+    label: Flags.string({
+      char: 'l',
+      description: 'Filter by label',
+    }),
+    priority: Flags.integer({
+      char: 'p',
+      description: 'Filter by priority (0-4)',
+      min: 0,
+      max: 4,
     }),
     format: Flags.string({
       char: 'f',
@@ -52,6 +68,13 @@ export default class Linear extends Command {
     output: Flags.string({
       char: 'o',
       description: 'Output file path',
+    }),
+    limit: Flags.integer({
+      char: 'n',
+      description: 'Maximum number of issues to fetch',
+      min: 1,
+      max: 100,
+      default: 100,
     }),
   };
 
@@ -94,7 +117,10 @@ export default class Linear extends Command {
         until,
         teamId: flags['team-id'] || defaults.teamId,
         assignee: flags.assignee || defaults.assignee,
+        author: flags.author,
         state: (flags.state || defaults.state) as 'open' | 'closed' | 'all',
+        label: flags.label,
+        priority: flags.priority,
       });
 
       // Format output
