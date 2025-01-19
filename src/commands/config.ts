@@ -14,88 +14,39 @@ export default class Config extends Command {
   ];
 
   static flags = {
-    get: Flags.string({
-      char: 'g',
-      description: 'Get a configuration value',
-    }),
-    set: Flags.string({
-      char: 's',
-      description: 'Set a configuration value',
-    }),
-    value: Flags.string({
-      char: 'v',
-      description: 'Value to set',
-      dependsOn: ['set'],
+    setup: Flags.boolean({
+      description: 'Run interactive setup',
     }),
     github: Flags.boolean({
       description: 'Configure GitHub defaults',
+    }),
+    linear: Flags.boolean({
+      description: 'Configure Linear defaults',
+    }),
+    get: Flags.string({
+      description: 'Get config value',
+    }),
+    set: Flags.string({
+      description: 'Set config value',
     }),
   };
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Config);
 
-    if (flags.get) {
-      const value = config.get(flags.get);
-      if (value) {
-        this.log(value);
-      } else {
-        this.warn(`No value found for ${flags.get}`);
-      }
-      return;
-    }
-
-    if (flags.set && flags.value) {
-      config.set(flags.set, flags.value);
-      this.log(chalk.green(`Set ${flags.set} to ${flags.value}`));
-      return;
-    }
-
-    if (flags.github) {
+    if (flags.setup) {
+      await this.runSetup();
+    } else if (flags.github) {
       await this.configureGitHub();
-      return;
+    } else if (flags.linear) {
+      await this.configureLinear();
+    } else if (flags.get) {
+      this.getConfig(flags.get);
+    } else if (flags.set) {
+      await this.setConfig();
+    } else {
+      this.error('No command specified');
     }
-
-    // Interactive setup
-    const answers = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'githubToken',
-        message: 'Enter your GitHub personal access token:',
-        validate: (input: string) => input.length > 0 || 'Token is required',
-      },
-      {
-        type: 'input',
-        name: 'slackToken',
-        message: 'Enter your Slack API token (optional):',
-      },
-      {
-        type: 'input',
-        name: 'linearToken',
-        message: 'Enter your Linear API token (optional):',
-      },
-      {
-        type: 'confirm',
-        name: 'configureGitHub',
-        message: 'Would you like to configure GitHub defaults?',
-        default: true,
-      },
-    ]);
-
-    config.set('github.token', answers.githubToken);
-    if (answers.slackToken) config.set('slack.token', answers.slackToken);
-    if (answers.linearToken) config.set('linear.token', answers.linearToken);
-
-    if (answers.configureGitHub) {
-      await this.configureGitHub();
-    }
-
-    this.log(chalk.green('Configuration saved successfully!'));
-    this.log(
-      chalk.blue(
-        'You can now use the CLI to fetch data from configured services.'
-      )
-    );
   }
 
   private async configureGitHub() {
@@ -139,5 +90,122 @@ export default class Config extends Command {
 
     config.set('github.defaults', answers);
     this.log(chalk.green('GitHub defaults configured successfully!'));
+  }
+
+  private async configureLinear() {
+    try {
+      console.log('Starting Linear configuration...');
+      const answers = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'token',
+          message: 'Enter your Linear API token:',
+          when: !config.get('linear.token'),
+          validate: (input: string) => {
+            if (!input.trim()) {
+              return 'Token cannot be empty';
+            }
+            return true;
+          },
+        },
+        {
+          type: 'input',
+          name: 'teamId',
+          message: 'Enter your default Linear team ID (optional):',
+        },
+        {
+          type: 'input',
+          name: 'timeframe',
+          message: 'Enter default timeframe (e.g., 1w, 2w, 1m):',
+          default: '1w',
+          validate: (input: string) => {
+            try {
+              config.parseTimeframe(input);
+              return true;
+            } catch (error) {
+              return 'Invalid timeframe format. Use format: 1d, 1w, 1m, 1y';
+            }
+          },
+        },
+        {
+          type: 'list',
+          name: 'state',
+          message: 'Select default issue state:',
+          choices: ['all', 'open', 'closed'],
+          default: 'all',
+        },
+      ]);
+
+      console.log('Answers received:', answers);
+
+      if (answers.token) {
+        config.set('linear.token', answers.token);
+      }
+
+      config.set('linear.defaults', {
+        teamId: answers.teamId || undefined,
+        timeframe: answers.timeframe,
+        state: answers.state,
+      });
+
+      this.log(chalk.green('Linear configuration updated successfully'));
+    } catch (error) {
+      console.error('Error during Linear configuration:', error);
+      throw error;
+    }
+  }
+
+  private async runSetup() {
+    const answers = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'configureGitHub',
+        message: 'Would you like to configure GitHub?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'configureLinear',
+        message: 'Would you like to configure Linear?',
+        default: true,
+      },
+    ]);
+
+    if (answers.configureGitHub) {
+      await this.configureGitHub();
+    }
+
+    if (answers.configureLinear) {
+      await this.configureLinear();
+    }
+
+    this.log(chalk.green('Setup completed successfully'));
+  }
+
+  private getConfig(key: string) {
+    const value = config.get(key);
+    if (value) {
+      this.log(value);
+    } else {
+      this.warn(`No value found for ${key}`);
+    }
+  }
+
+  private async setConfig() {
+    const answers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'key',
+        message: 'Enter the configuration key:',
+      },
+      {
+        type: 'input',
+        name: 'value',
+        message: 'Enter the configuration value:',
+      },
+    ]);
+
+    config.set(answers.key, answers.value);
+    this.log(chalk.green(`Set ${answers.key} to ${answers.value}`));
   }
 }

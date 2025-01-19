@@ -20,6 +20,7 @@
     "bun": ">=1.0.0"
   },
   "dependencies": {
+    "@linear/sdk": "^37.0.0",
     "@oclif/core": "^3.0.0",
     "@oclif/plugin-help": "^5.0.0",
     "@oclif/plugin-plugins": "^4.0.0",
@@ -48,11 +49,23 @@
   "oclif": {
     "bin": "recap",
     "dirname": "recap",
-    "commands": "./src/commands",
+    "commands": "./dist/commands",
     "plugins": [
       "@oclif/plugin-help",
       "@oclif/plugin-plugins"
-    ]
+    ],
+    "topicSeparator": " ",
+    "topics": {
+      "config": {
+        "description": "Configure API tokens and settings"
+      },
+      "github": {
+        "description": "Fetch data from GitHub repository"
+      },
+      "linear": {
+        "description": "Fetch data from Linear"
+      }
+    }
   },
   "files": [
     "/bin",
