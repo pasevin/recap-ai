@@ -1,7 +1,10 @@
-import { Command, Flags } from '@oclif/core';
+import { Args, Command, Flags } from '@oclif/core';
 import { config } from '../utils/config';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import password from '@inquirer/password';
+import confirm from '@inquirer/confirm';
+import input from '@inquirer/input';
+import number from '@inquirer/number';
 
 export default class Config extends Command {
   static description = 'Configure API tokens and settings';
@@ -9,203 +12,214 @@ export default class Config extends Command {
   static examples = [
     '$ recap config setup',
     '$ recap config set github.token YOUR_TOKEN',
+    '$ recap config set linear.token YOUR_TOKEN',
     '$ recap config get github.token',
+    '$ recap config get linear.token',
     '$ recap config github',
+    '$ recap config linear',
   ];
 
   static flags = {
     setup: Flags.boolean({
-      description: 'Run interactive setup',
+      description: 'Run the setup wizard',
+      exclusive: ['github', 'linear'],
     }),
     github: Flags.boolean({
-      description: 'Configure GitHub defaults',
+      description: 'Configure GitHub settings',
+      exclusive: ['setup', 'linear'],
     }),
     linear: Flags.boolean({
-      description: 'Configure Linear defaults',
+      description: 'Configure Linear settings',
+      exclusive: ['setup', 'github'],
     }),
-    get: Flags.string({
-      description: 'Get config value',
+  };
+
+  static args = {
+    action: Args.string({
+      description: 'Action to perform (get/set)',
+      required: false,
+      options: ['get', 'set'],
     }),
-    set: Flags.string({
-      description: 'Set config value',
+    key: Args.string({
+      description: 'Config key to get/set',
+      required: false,
+    }),
+    value: Args.string({
+      description: 'Value to set for the given key',
+      required: false,
     }),
   };
 
   async run(): Promise<void> {
-    const { flags } = await this.parse(Config);
+    const { args, flags } = await this.parse(Config);
 
     if (flags.setup) {
       await this.runSetup();
-    } else if (flags.github) {
-      await this.configureGitHub();
-    } else if (flags.linear) {
-      await this.configureLinear();
-    } else if (flags.get) {
-      this.getConfig(flags.get);
-    } else if (flags.set) {
-      await this.setConfig();
-    } else {
-      this.error('No command specified');
+      return;
     }
-  }
 
-  private async configureGitHub() {
-    const currentDefaults = config.get('github.defaults') || {};
+    if (flags.github) {
+      await this.configureGitHub();
+      return;
+    }
 
-    const answers = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'timeframe',
-        message: 'Default timeframe (e.g., 1d, 1w, 1m, 1y):',
-        default: currentDefaults.timeframe || '1w',
-        validate: (input: string) => {
-          try {
-            config.parseTimeframe(input);
-            return true;
-          } catch (error) {
-            return 'Invalid timeframe format. Use format: 1d, 1w, 1m, 1y';
-          }
-        },
-      },
-      {
-        type: 'input',
-        name: 'branch',
-        message: 'Default branch:',
-        default: currentDefaults.branch || 'main',
-      },
-      {
-        type: 'input',
-        name: 'author',
-        message: 'Default author (leave empty for all):',
-        default: currentDefaults.author || '',
-      },
-      {
-        type: 'list',
-        name: 'prState',
-        message: 'Default PR state:',
-        choices: ['all', 'open', 'closed'],
-        default: currentDefaults.prState || 'all',
-      },
-    ]);
+    if (flags.linear) {
+      await this.configureLinear();
+      return;
+    }
 
-    config.set('github.defaults', answers);
-    this.log(chalk.green('GitHub defaults configured successfully!'));
-  }
-
-  private async configureLinear() {
-    try {
-      console.log('Starting Linear configuration...');
-      const answers = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'token',
-          message: 'Enter your Linear API token:',
-          when: !config.get('linear.token'),
-          validate: (input: string) => {
-            if (!input.trim()) {
-              return 'Token cannot be empty';
-            }
-            return true;
-          },
-        },
-        {
-          type: 'input',
-          name: 'teamId',
-          message: 'Enter your default Linear team ID (optional):',
-        },
-        {
-          type: 'input',
-          name: 'timeframe',
-          message: 'Enter default timeframe (e.g., 1w, 2w, 1m):',
-          default: '1w',
-          validate: (input: string) => {
-            try {
-              config.parseTimeframe(input);
-              return true;
-            } catch (error) {
-              return 'Invalid timeframe format. Use format: 1d, 1w, 1m, 1y';
-            }
-          },
-        },
-        {
-          type: 'list',
-          name: 'state',
-          message: 'Select default issue state:',
-          choices: ['all', 'open', 'closed'],
-          default: 'all',
-        },
-      ]);
-
-      console.log('Answers received:', answers);
-
-      if (answers.token) {
-        config.set('linear.token', answers.token);
+    if (args.action === 'get') {
+      if (!args.key) {
+        this.error('Please provide a key to get');
+        return;
       }
-
-      config.set('linear.defaults', {
-        teamId: answers.teamId || undefined,
-        timeframe: answers.timeframe,
-        state: answers.state,
-      });
-
-      this.log(chalk.green('Linear configuration updated successfully'));
-    } catch (error) {
-      console.error('Error during Linear configuration:', error);
-      throw error;
+      const value = config.get(args.key);
+      if (value === undefined) {
+        this.log(chalk.yellow(`No value found for key: ${args.key}`));
+      } else {
+        this.log(value);
+      }
+      return;
     }
+
+    if (args.action === 'set') {
+      if (!args.key || !args.value) {
+        this.error('Please provide both key and value to set');
+        return;
+      }
+      config.set(args.key, args.value);
+      this.log(chalk.green('Config updated successfully'));
+      return;
+    }
+
+    this.error(
+      'Please provide a valid action (get/set) or use --setup/--github/--linear flags'
+    );
   }
 
-  private async runSetup() {
-    const answers = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'configureGitHub',
-        message: 'Would you like to configure GitHub?',
-        default: true,
-      },
-      {
-        type: 'confirm',
-        name: 'configureLinear',
-        message: 'Would you like to configure Linear?',
-        default: true,
-      },
-    ]);
+  private async runSetup(): Promise<void> {
+    this.log(chalk.bold('Welcome to recap-ai setup!'));
+    this.log("Let's configure your API tokens and settings.\n");
 
-    if (answers.configureGitHub) {
+    const shouldConfigureGitHub = await confirm({
+      message: 'Would you like to configure GitHub?',
+      default: true,
+    });
+
+    if (shouldConfigureGitHub) {
       await this.configureGitHub();
     }
 
-    if (answers.configureLinear) {
+    const shouldConfigureLinear = await confirm({
+      message: 'Would you like to configure Linear?',
+      default: true,
+    });
+
+    if (shouldConfigureLinear) {
       await this.configureLinear();
     }
 
-    this.log(chalk.green('Setup completed successfully'));
+    this.log(chalk.green('\nSetup complete! You can now use recap-ai.'));
   }
 
-  private getConfig(key: string) {
-    const value = config.get(key);
-    if (value) {
-      this.log(value);
-    } else {
-      this.warn(`No value found for ${key}`);
-    }
+  private async configureGitHub(): Promise<void> {
+    this.log(chalk.bold('\nGitHub Configuration'));
+    this.log(
+      "You'll need your GitHub Personal Access Token. You can create one at:\n" +
+        'https://github.com/settings/tokens?type=beta\n' +
+        'Ensure it has the following permissions:\n' +
+        '- Read access to code and metadata\n' +
+        '- Read access to pull requests\n'
+    );
+
+    const token = await password({
+      message: 'Enter your GitHub Personal Access Token:',
+      mask: '*',
+    });
+
+    const timeframe = await input({
+      message: 'Enter default timeframe (e.g., 1d, 1w, 1m):',
+      default: '2w',
+      validate: (value: string) => {
+        try {
+          config.parseTimeframe(value);
+          return true;
+        } catch (error) {
+          return 'Invalid timeframe format. Use format: <number><unit>, e.g., 1d, 1w, 1m';
+        }
+      },
+    });
+
+    const branch = await input({
+      message: 'Enter default branch:',
+      default: 'main',
+    });
+
+    const author = await input({
+      message: 'Enter default author (GitHub username):',
+      default: '',
+    });
+
+    config.set('github.token', token);
+    config.set('github.defaults', {
+      timeframe,
+      branch: branch || undefined,
+      author: author || undefined,
+      prState: 'all',
+    });
+
+    this.log(chalk.green('\nGitHub configuration saved!'));
   }
 
-  private async setConfig() {
-    const answers = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'key',
-        message: 'Enter the configuration key:',
-      },
-      {
-        type: 'input',
-        name: 'value',
-        message: 'Enter the configuration value:',
-      },
-    ]);
+  private async configureLinear(): Promise<void> {
+    this.log(chalk.bold('\nLinear Configuration'));
+    this.log(
+      "You'll need your Linear API Key. You can create one at:\n" +
+        'https://linear.app/settings/api\n'
+    );
 
-    config.set(answers.key, answers.value);
-    this.log(chalk.green(`Set ${answers.key} to ${answers.value}`));
+    const token = await password({
+      message: 'Enter your Linear API Key:',
+      mask: '*',
+    });
+
+    const teamId = await input({
+      message: 'Enter your Linear Team ID:',
+      default: '',
+    });
+
+    const timeframe = await input({
+      message: 'Enter default timeframe (e.g., 1d, 1w, 1m):',
+      default: '2w',
+      validate: (value: string) => {
+        try {
+          config.parseTimeframe(value);
+          return true;
+        } catch (error) {
+          return 'Invalid timeframe format. Use format: <number><unit>, e.g., 1d, 1w, 1m';
+        }
+      },
+    });
+
+    const limit = await number({
+      message: 'Enter default limit for number of issues:',
+      default: 1000,
+      validate: (value: number | undefined) => {
+        if (!value || value < 1 || value > 1000) {
+          return 'Limit must be between 1 and 1000';
+        }
+        return true;
+      },
+    });
+
+    config.set('linear.token', token);
+    config.set('linear.defaults', {
+      teamId: teamId || undefined,
+      timeframe,
+      state: 'all',
+      limit,
+    });
+
+    this.log(chalk.green('\nLinear configuration saved!'));
   }
 }
