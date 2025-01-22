@@ -174,12 +174,13 @@ export default class Config extends Command {
   private async configureLinear(): Promise<void> {
     this.log(chalk.bold('\nLinear Configuration'));
     this.log(
-      "You'll need your Linear API Key. You can create one at:\n" +
-        'https://linear.app/settings/api\n'
+      "You'll need your Linear Personal API Key. You can create one at:\n" +
+        'https://linear.app/settings/account/security\n' +
+        'Under "Personal API keys" section, create a new key for recap-ai\n'
     );
 
     const token = await password({
-      message: 'Enter your Linear API Key:',
+      message: 'Enter your Linear Personal API Key:',
       mask: '*',
     });
 
