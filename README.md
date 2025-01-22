@@ -36,30 +36,41 @@ bun link
 
 ## Configuration
 
-1. Set up your configuration:
+Set up your configuration using one of these methods:
 
 ```bash
-recap config setup
-```
+# Interactive setup wizard (recommended)
+recap config --setup
 
-This will guide you through:
+# Configure services individually
+recap config --github
+recap config --linear
 
-- Setting up API tokens
-- Configuring GitHub defaults (timeframe, branch, etc.)
-
-You can also configure settings individually:
-
-```bash
-# Set specific values
+# Manual configuration
 recap config set github.token YOUR_TOKEN
-recap config set github.defaults.branch main
+recap config set linear.token YOUR_TOKEN
 
-# Get current values
+# View current settings
 recap config get github.token
-
-# Configure GitHub defaults interactively
-recap config github
+recap config get github.defaults
+recap config get linear.defaults
 ```
+
+Each service can be configured with defaults:
+
+### GitHub Defaults
+
+- `timeframe`: Default time period (e.g., "2w" for 2 weeks)
+- `branch`: Default branch to analyze
+- `author`: Default GitHub username to filter by
+- `prState`: Default PR state ("open", "closed", "all")
+
+### Linear Defaults
+
+- `teamId`: Your Linear team ID
+- `timeframe`: Default time period
+- `state`: Default issue state ("open", "closed", "all")
+- `limit`: Maximum number of issues to fetch (1-1000)
 
 ## Usage
 
@@ -69,27 +80,24 @@ Fetch and analyze GitHub repository data:
 
 ```bash
 # Basic usage (uses configured defaults)
-recap github -r owner/repo
+recap github --repo owner/repo
 
 # Specify timeframe
-recap github -r owner/repo -t 2w  # Last 2 weeks
-recap github -r owner/repo -t 1m  # Last month
+recap github --repo owner/repo --timeframe 2w  # Last 2 weeks
+recap github --repo owner/repo --timeframe 1m  # Last month
 
 # Custom date range
-recap github -r owner/repo --since 2024-01-01 --until 2024-01-31
+recap github --repo owner/repo --since 2024-01-01 --until 2024-01-31
 
 # Filter by author and PR state
-recap github -r owner/repo --author johndoe --pr-state open
+recap github --repo owner/repo --author johndoe --pr-state open
 
 # Different output formats
-recap github -r owner/repo --format json
-recap github -r owner/repo --format summary
-
-# Save output to file
-recap github -r owner/repo -o report.json
+recap github --repo owner/repo --format json
+recap github --repo owner/repo --format summary
 ```
 
-#### Available Metrics
+#### GitHub Metrics
 
 The GitHub integration provides comprehensive metrics:
 
@@ -126,6 +134,56 @@ The GitHub integration provides comprehensive metrics:
 - Labels
   - Top 10 most used labels
   - Label usage counts
+
+### Linear Integration
+
+Fetch and analyze Linear issues:
+
+```bash
+# Basic usage (uses configured defaults)
+recap linear --team TEAM_ID
+
+# Specify timeframe
+recap linear --team TEAM_ID --timeframe 2w  # Last 2 weeks
+recap linear --team TEAM_ID --timeframe 1m  # Last month
+
+# Custom date range
+recap linear --team TEAM_ID --since 2024-01-01 --until 2024-01-31
+
+# Filter by assignee and state
+recap linear --team TEAM_ID --assignee johndoe --state open
+
+# Different output formats
+recap linear --team TEAM_ID --format json
+recap linear --team TEAM_ID --format summary
+
+# Limit number of issues
+recap linear --team TEAM_ID --limit 500
+```
+
+#### Linear Metrics
+
+The Linear integration provides:
+
+- Issue Statistics
+
+  - Total issues
+  - Open/Closed issue counts
+  - Issues by state
+
+- Time Metrics
+
+  - Average time to close
+  - Issue velocity (issues closed per day)
+
+- Contributors
+
+  - Most active assignees
+  - Issues by assignee
+
+- Labels & Projects
+  - Issues by label
+  - Issues by project
 
 ## Development
 
