@@ -16,9 +16,6 @@ interface Config {
       prState?: 'open' | 'closed' | 'all';
     };
   };
-  slack?: {
-    token: string;
-  };
   linear?: {
     token?: string;
     defaults?: {

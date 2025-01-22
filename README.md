@@ -1,13 +1,12 @@
 # Recap AI
 
-A modern CLI tool for aggregating and summarizing data from multiple services (GitHub, Linear, Slack) using AI.
+A modern CLI tool for aggregating and summarizing data from multiple services (GitHub, Linear) using AI.
 
 ## Features
 
 - Fetch and analyze data from multiple services:
   - GitHub: Commits, PRs, reviews, and detailed metrics
   - Linear (Coming soon)
-  - Slack (Coming soon)
 - AI-powered summarization of aggregated data (Coming soon)
 - Flexible output formats (JSON, Summary)
 - Configurable data filters and date ranges
@@ -16,7 +15,7 @@ A modern CLI tool for aggregating and summarizing data from multiple services (G
 ## Prerequisites
 
 - [Bun](https://bun.sh) >= 1.0.0
-- GitHub/Slack/Linear API tokens
+- GitHub/Linear API tokens
 
 ## Installation
 
