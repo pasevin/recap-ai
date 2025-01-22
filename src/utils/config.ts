@@ -18,6 +18,8 @@ interface Config {
       teamId?: string;
       timeframe?: string;
       state?: 'open' | 'closed' | 'all';
+      author?: string;
+      limit?: number;
     };
   };
   [key: string]: any;

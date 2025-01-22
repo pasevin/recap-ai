@@ -202,6 +202,11 @@ export default class Config extends Command {
       },
     });
 
+    const author = await input({
+      message: 'Enter default author (Linear username or email):',
+      default: '',
+    });
+
     const limit = await number({
       message: 'Enter default limit for number of issues:',
       default: 1000,
@@ -218,6 +223,7 @@ export default class Config extends Command {
       teamId: teamId || undefined,
       timeframe,
       state: 'all',
+      author: author || undefined,
       limit,
     });
 
