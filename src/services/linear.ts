@@ -188,18 +188,61 @@ export class LinearService {
         throw new Error('Team ID is required');
       }
 
+      // Fetch workflow states first
+      const workflowStatesQuery = `
+        query WorkflowStates($teamId: String!) {
+          team(id: $teamId) {
+            states {
+              nodes {
+                id
+                name
+                type
+              }
+            }
+          }
+        }
+      `;
+
+      const statesResponse = await this.client.client.rawRequest<
+        {
+          team: {
+            states: {
+              nodes: Array<{
+                id: string;
+                name: string;
+                type: string;
+              }>;
+            };
+          };
+        },
+        { teamId: string }
+      >(workflowStatesQuery, { teamId });
+
+      if (!statesResponse.data) {
+        throw new Error('Failed to fetch workflow states');
+      }
+
+      const states = statesResponse.data.team.states.nodes;
+
       // Build filter object
       const filter: Record<string, unknown> = {};
 
       // Add filters
       if (options.state && options.state !== 'all') {
-        if (options.state === 'open') {
-          filter.state = {
-            name: { in: ['Todo', 'In Progress', 'Triage', 'Backlog'] },
-          };
-        } else if (options.state === 'closed') {
-          filter.state = { name: { in: ['Done', 'Canceled', 'Merged'] } };
-        }
+        // Map state types to our open/closed states
+        const openTypes = ['started', 'unstarted', 'backlog', 'triage'];
+        const stateNames = states
+          .filter((state) => {
+            const type = state.type.toLowerCase();
+            if (options.state === 'open') {
+              return openTypes.includes(type);
+            } else {
+              return !openTypes.includes(type);
+            }
+          })
+          .map((state) => state.name);
+
+        filter.state = { name: { in: stateNames } };
       }
 
       if (options.since || options.until) {
