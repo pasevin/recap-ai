@@ -188,42 +188,37 @@ export class LinearService {
         throw new Error('Team ID is required');
       }
 
-      console.log('Fetching team:', teamId);
-      const team = await this.client.team(teamId);
-      if (!team) {
-        throw new Error(`Team not found: ${teamId}`);
-      }
-
-      // Build query parameters
-      const queryVariables: Record<string, unknown> = {
-        first: options.limit || 100,
-      };
-
       // Build filter object
       const filter: Record<string, unknown> = {};
 
       // Add filters
       if (options.state && options.state !== 'all') {
-        filter.state = { name: { eq: options.state.toUpperCase() } };
+        if (options.state === 'open') {
+          filter.state = {
+            name: { in: ['Todo', 'In Progress', 'Triage', 'Backlog'] },
+          };
+        } else if (options.state === 'closed') {
+          filter.state = { name: { in: ['Done', 'Canceled', 'Merged'] } };
+        }
       }
 
       if (options.since || options.until) {
-        const updatedAt: Record<string, string> = {};
+        const createdAt: Record<string, string> = {};
         if (options.since) {
-          updatedAt.gte = (
+          const sinceDate =
             options.since instanceof Date
               ? options.since
-              : new Date(options.since)
-          ).toISOString();
+              : new Date(options.since);
+          createdAt.gte = sinceDate.toISOString();
         }
         if (options.until) {
-          updatedAt.lte = (
+          const untilDate =
             options.until instanceof Date
               ? options.until
-              : new Date(options.until)
-          ).toISOString();
+              : new Date(options.until);
+          createdAt.lte = untilDate.toISOString();
         }
-        filter.updatedAt = updatedAt;
+        filter.createdAt = createdAt;
       }
 
       if (options.assignee) {
@@ -239,7 +234,7 @@ export class LinearService {
       }
 
       if (options.label) {
-        filter.labels = { name: { eq: options.label } };
+        filter.labels = { some: { name: { eq: options.label } } };
       }
 
       if (options.search) {
@@ -249,75 +244,157 @@ export class LinearService {
         ];
       }
 
-      // Only add filter if we have any conditions
-      if (Object.keys(filter).length > 0) {
-        queryVariables.filter = filter;
+      // Build the GraphQL query to include all related data
+      const query = `
+        query IssueSearch($teamId: String!, $first: Int, $filter: IssueFilter) {
+          team(id: $teamId) {
+            issues(first: $first, filter: $filter) {
+              nodes {
+                id
+                identifier
+                title
+                description
+                priority
+                createdAt
+                updatedAt
+                completedAt
+                state {
+                  name
+                }
+                assignee {
+                  name
+                  email
+                  displayName
+                }
+                creator {
+                  name
+                  email
+                  displayName
+                }
+                labels {
+                  nodes {
+                    name
+                  }
+                }
+                comments(first: 10) {
+                  nodes {
+                    body
+                    createdAt
+                    updatedAt
+                    user {
+                      name
+                      email
+                      displayName
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      interface GraphQLResponse {
+        team: {
+          issues: {
+            nodes: Array<{
+              id: string;
+              identifier: string;
+              title: string;
+              description: string | null;
+              priority: number;
+              createdAt: string;
+              updatedAt: string;
+              completedAt: string | null;
+              state: {
+                name: string;
+              } | null;
+              assignee: {
+                name: string | null;
+                email: string | null;
+                displayName: string | null;
+              } | null;
+              creator: {
+                name: string | null;
+                email: string | null;
+                displayName: string | null;
+              } | null;
+              labels: {
+                nodes: Array<{
+                  name: string;
+                }>;
+              } | null;
+              comments: {
+                nodes: Array<{
+                  body: string;
+                  createdAt: string;
+                  updatedAt: string;
+                  user: {
+                    name: string | null;
+                    email: string | null;
+                    displayName: string | null;
+                  } | null;
+                }>;
+              } | null;
+            }>;
+          };
+        };
       }
 
-      // Add sorting
-      if (options.sortBy) {
-        queryVariables.orderBy =
-          options.sortBy +
-          '_' +
-          (options.sortDirection?.toUpperCase() || 'DESC');
+      interface GraphQLError {
+        message: string;
       }
 
-      // Fetch issues for the team
-      console.log('Fetching issues for team:', team.name);
-      const issues = await team.issues(queryVariables);
+      const response = await this.client.client.rawRequest<
+        GraphQLResponse,
+        { teamId: string; first: number; filter: any }
+      >(query, {
+        teamId,
+        first: options.limit || 100,
+        filter,
+      });
 
-      console.log(`Found ${issues.nodes.length} issues`);
+      if (!response.data) {
+        throw new Error('No data returned from Linear API');
+      }
 
-      // Transform issues into our format
-      return Promise.all(
-        issues.nodes.map(async (issue: Issue) => {
-          // Get user display names safely
-          const getDisplayName = (user: User | null | undefined) => {
-            if (!user) return 'Unknown';
-            return user.name || user.email || user.displayName || 'Unknown';
-          };
+      const issues = response.data.team.issues;
 
-          // Get related data
-          const [state, assignee, creator, labels, comments] =
-            await Promise.all([
-              issue.state,
-              issue.assignee,
-              issue.creator,
-              issue.labels(),
-              issue.comments(),
-            ]);
+      if (!issues.nodes) {
+        return [];
+      }
 
-          return {
-            id: issue.id,
-            identifier: issue.identifier,
-            title: issue.title,
-            description: issue.description || '',
-            state: (state as WorkflowState)?.name || 'Unknown',
-            priority: issue.priority || 0,
-            assignee: assignee ? getDisplayName(assignee as User) : null,
-            creator: getDisplayName(creator as User),
-            createdAt: issue.createdAt.toISOString(),
-            updatedAt: issue.updatedAt.toISOString(),
-            completedAt: issue.completedAt
-              ? issue.completedAt.toISOString()
-              : null,
-            labels: (labels?.nodes || []).map(
-              (label: IssueLabel) => label.name
-            ),
-            comments: await Promise.all(
-              (comments?.nodes || []).map(async (comment: Comment) => {
-                const commentUser = await comment.user;
-                return {
-                  author: getDisplayName(commentUser as User),
-                  body: comment.body,
-                  createdAt: comment.createdAt.toISOString(),
-                  updatedAt: comment.updatedAt.toISOString(),
-                };
-              })
-            ),
-          };
-        })
-      );
+      console.log('Found', issues.nodes.length, 'issues');
+
+      // Transform the data
+      return issues.nodes.map((issue) => {
+        // Get user display names safely
+        const getDisplayName = (user: any) => {
+          if (!user) return 'Unknown';
+          return user.name || user.email || user.displayName || 'Unknown';
+        };
+
+        return {
+          id: issue.id,
+          identifier: issue.identifier,
+          title: issue.title,
+          description: issue.description || '',
+          state: issue.state?.name || 'Unknown',
+          priority: issue.priority || 0,
+          assignee: getDisplayName(issue.assignee),
+          creator: getDisplayName(issue.creator),
+          createdAt: issue.createdAt,
+          updatedAt: issue.updatedAt,
+          completedAt: issue.completedAt,
+          labels: (issue.labels?.nodes || []).map((label) => label.name),
+          comments: (issue.comments?.nodes || []).map((comment) => ({
+            author: getDisplayName(comment.user),
+            body: comment.body,
+            createdAt: comment.createdAt,
+            updatedAt: comment.updatedAt,
+          })),
+        };
+      });
     } catch (error) {
       console.error('Error fetching Linear issues:', error);
       throw error;

@@ -97,14 +97,21 @@ export default class Linear extends Command {
       let since: Date | undefined;
       let until: Date | undefined;
 
-      if (flags.timeframe || defaults.timeframe) {
+      if (flags.since || flags.until) {
+        // Explicit date range takes precedence
+        if (flags.since) {
+          since = new Date(flags.since);
+          // Set time to start of day
+          since.setUTCHours(0, 0, 0, 0);
+        }
+        if (flags.until) {
+          until = new Date(flags.until);
+          // Set time to end of day
+          until.setUTCHours(23, 59, 59, 999);
+        }
+      } else if (flags.timeframe || defaults.timeframe) {
+        // Fall back to timeframe if no explicit dates
         since = config.parseTimeframe(flags.timeframe || defaults.timeframe);
-      } else if (flags.since) {
-        since = new Date(flags.since);
-      }
-
-      if (flags.until) {
-        until = new Date(flags.until);
       }
 
       const linearService = new LinearService({
