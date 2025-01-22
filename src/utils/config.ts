@@ -8,7 +8,14 @@ interface Config {
     defaults?: {
       timeframe?: string;
       branch?: string;
-      author?: string;
+      person?: {
+        identifier?: string; // GitHub username
+        includeAuthored?: boolean; // PRs and commits they authored
+        includeReviewed?: boolean; // PRs they reviewed
+        includeAssigned?: boolean; // PRs assigned to them
+        includeCommented?: boolean; // PRs/issues they commented on
+        includeMentioned?: boolean; // Where they were mentioned
+      };
       prState?: 'open' | 'closed' | 'all';
     };
   };
@@ -18,7 +25,14 @@ interface Config {
       teamId?: string;
       timeframe?: string;
       state?: 'open' | 'closed' | 'all';
-      author?: string;
+      person?: {
+        identifier?: string; // Linear username/email
+        includeCreated?: boolean; // Issues they created
+        includeAssigned?: boolean; // Issues assigned to them
+        includeCommented?: boolean; // Issues they commented on
+        includeSubscribed?: boolean; // Issues they're subscribed to
+        includeMentioned?: boolean; // Where they were mentioned
+      };
       limit?: number;
     };
   };
@@ -67,7 +81,14 @@ export class ConfigManager {
       current[key] = current[key] || {};
       return current[key];
     }, obj);
-    target[lastKey] = value;
+    // Convert string 'true'/'false' to boolean if needed
+    if (value === 'true') {
+      target[lastKey] = true;
+    } else if (value === 'false') {
+      target[lastKey] = false;
+    } else {
+      target[lastKey] = value;
+    }
   }
 
   private loadConfig(): Config {

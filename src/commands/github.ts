@@ -41,7 +41,7 @@ export default class Github extends Command {
     }),
     author: Flags.string({
       char: 'a',
-      description: 'Filter by author',
+      description: 'Filter by author (use "none" to disable author filtering)',
     }),
     'pr-state': Flags.string({
       description: 'Filter PRs by state (open, closed, all)',
@@ -84,14 +84,17 @@ export default class Github extends Command {
       let since: Date | undefined;
       let until: Date | undefined;
 
-      if (flags.timeframe || defaults.timeframe) {
+      if (flags.since || flags.until) {
+        // If explicit dates are provided, use them
+        if (flags.since) {
+          since = new Date(flags.since);
+        }
+        if (flags.until) {
+          until = new Date(flags.until);
+        }
+      } else if (flags.timeframe || defaults.timeframe) {
+        // Only use timeframe if no explicit dates are provided
         since = config.parseTimeframe(flags.timeframe || defaults.timeframe);
-      } else if (flags.since) {
-        since = new Date(flags.since);
-      }
-
-      if (flags.until) {
-        until = new Date(flags.until);
       }
 
       const githubService = new GitHubService({
@@ -104,7 +107,8 @@ export default class Github extends Command {
         since,
         until,
         branch: flags.branch || defaults.branch,
-        author: flags.author || defaults.author,
+        author:
+          flags.author === 'none' ? undefined : flags.author || defaults.author,
         prState: (flags['pr-state'] || defaults.prState) as
           | 'open'
           | 'closed'

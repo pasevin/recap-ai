@@ -105,6 +105,13 @@ export class GitHubService {
   }
 
   private async fetchCommits(options: FetchOptions) {
+    console.log('Fetching commits with options:', {
+      since: options.since,
+      until: options.until,
+      branch: options.branch,
+      author: options.author,
+    });
+
     const { data } = await this.octokit.repos.listCommits({
       owner: this.owner,
       repo: this.repo,
@@ -120,6 +127,8 @@ export class GitHubService {
       author: options.author,
     });
 
+    // console.log(`Found ${data.length} commits`);
+
     return data.map((commit) => ({
       sha: commit.sha,
       message: commit.commit.message,
@@ -129,36 +138,85 @@ export class GitHubService {
   }
 
   private async fetchPullRequests(options: FetchOptions) {
-    const { data } = await this.octokit.pulls.list({
+    console.log('Fetching pull requests with options:', {
+      since: options.since,
+      until: options.until,
+      branch: options.branch,
+      author: options.author,
+      prState: options.prState,
+    });
+
+    const prs = await this.octokit.paginate(this.octokit.pulls.list, {
       owner: this.owner,
       repo: this.repo,
       state: options.prState || 'all',
       sort: 'updated',
       direction: 'desc',
       per_page: 100,
+      base: options.branch,
+      since:
+        options.since instanceof Date
+          ? options.since.toISOString()
+          : options.since,
     });
 
-    const sinceDate =
-      options.since instanceof Date
-        ? options.since
-        : options.since
-          ? new Date(options.since)
-          : null;
-    const untilDate =
-      options.until instanceof Date
-        ? options.until
-        : options.until
-          ? new Date(options.until)
-          : null;
+    // console.log(`Found ${prs.length} pull requests before filtering`);
 
-    const filteredPRs = data.filter((pr) => {
-      const updatedAt = new Date(pr.updated_at);
-      const matchesSince = !sinceDate || updatedAt >= sinceDate;
-      const matchesUntil = !untilDate || updatedAt <= untilDate;
+    const sinceDate: Date | null = options.since
+      ? options.since instanceof Date
+        ? options.since
+        : new Date(options.since)
+      : null;
+    const untilDate: Date | null = options.until
+      ? options.until instanceof Date
+        ? options.until
+        : new Date(options.until)
+      : null;
+
+    const filteredPRs = prs.filter((pr) => {
+      const createdAt = new Date(pr.created_at);
+      const closedAt = pr.closed_at ? new Date(pr.closed_at) : null;
+
+      // A PR is considered active in the period if:
+      // 1. It was created during the period, OR
+      // 2. It was closed during the period, OR
+      // 3. It was updated during the period (excluding PRs that were closed before the period)
+      const wasCreatedInPeriod =
+        sinceDate === null ||
+        (createdAt >= sinceDate &&
+          (untilDate === null || createdAt <= untilDate));
+      const wasClosedInPeriod =
+        closedAt !== null &&
+        (sinceDate === null || closedAt >= sinceDate) &&
+        (untilDate === null || closedAt <= untilDate);
+      const wasUpdatedInPeriod =
+        (sinceDate === null || new Date(pr.updated_at) >= sinceDate) &&
+        (untilDate === null || new Date(pr.updated_at) <= untilDate);
+
       const matchesAuthor =
         !options.author || pr.user?.login === options.author;
-      return matchesSince && matchesUntil && matchesAuthor;
+      const matchesBranch = !options.branch || pr.base.ref === options.branch;
+
+      // console.log(`PR #${pr.number}:`, {
+      //   createdAt: createdAt.toISOString(),
+      //   closedAt: closedAt?.toISOString() || 'null',
+      //   wasCreatedInPeriod,
+      //   wasClosedInPeriod,
+      //   wasUpdatedInPeriod,
+      //   matchesAuthor,
+      //   matchesBranch,
+      //   sinceDate: sinceDate?.toISOString() || 'null',
+      //   untilDate: untilDate?.toISOString() || 'null',
+      // });
+
+      return (
+        (wasCreatedInPeriod || wasClosedInPeriod || wasUpdatedInPeriod) &&
+        matchesAuthor &&
+        matchesBranch
+      );
     });
+
+    // console.log(`Found ${filteredPRs.length} pull requests after filtering`);
 
     const prsWithDetails = await Promise.all(
       filteredPRs.map(async (pr) => {

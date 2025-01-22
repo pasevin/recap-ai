@@ -155,16 +155,50 @@ export default class Config extends Command {
       default: 'main',
     });
 
-    const author = await input({
-      message: 'Enter default author (GitHub username):',
+    const identifier = await input({
+      message: 'Enter default GitHub username to track:',
       default: '',
     });
+
+    let person;
+    if (identifier) {
+      this.log('\nWhat activities should be included for this person?');
+      const includeAuthored = await confirm({
+        message: 'Include PRs and commits they authored?',
+        default: true,
+      });
+      const includeReviewed = await confirm({
+        message: 'Include PRs they reviewed?',
+        default: true,
+      });
+      const includeAssigned = await confirm({
+        message: 'Include PRs assigned to them?',
+        default: true,
+      });
+      const includeCommented = await confirm({
+        message: 'Include PRs/issues they commented on?',
+        default: true,
+      });
+      const includeMentioned = await confirm({
+        message: 'Include where they were mentioned?',
+        default: true,
+      });
+
+      person = {
+        identifier,
+        includeAuthored,
+        includeReviewed,
+        includeAssigned,
+        includeCommented,
+        includeMentioned,
+      };
+    }
 
     config.set('github.token', token);
     config.set('github.defaults', {
       timeframe,
       branch: branch || undefined,
-      author: author || undefined,
+      person,
       prState: 'all',
     });
 
@@ -202,10 +236,44 @@ export default class Config extends Command {
       },
     });
 
-    const author = await input({
-      message: 'Enter default author (Linear username or email):',
+    const identifier = await input({
+      message: 'Enter default Linear username/email to track:',
       default: '',
     });
+
+    let person;
+    if (identifier) {
+      this.log('\nWhat activities should be included for this person?');
+      const includeCreated = await confirm({
+        message: 'Include issues they created?',
+        default: true,
+      });
+      const includeAssigned = await confirm({
+        message: 'Include issues assigned to them?',
+        default: true,
+      });
+      const includeCommented = await confirm({
+        message: 'Include issues they commented on?',
+        default: true,
+      });
+      const includeSubscribed = await confirm({
+        message: 'Include issues they are subscribed to?',
+        default: true,
+      });
+      const includeMentioned = await confirm({
+        message: 'Include where they were mentioned?',
+        default: true,
+      });
+
+      person = {
+        identifier,
+        includeCreated,
+        includeAssigned,
+        includeCommented,
+        includeSubscribed,
+        includeMentioned,
+      };
+    }
 
     const limit = await number({
       message: 'Enter default limit for number of issues:',
@@ -223,7 +291,7 @@ export default class Config extends Command {
       teamId: teamId || undefined,
       timeframe,
       state: 'all',
-      author: author || undefined,
+      person,
       limit,
     });
 
