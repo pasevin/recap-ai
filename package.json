@@ -37,6 +37,7 @@
     "@oclif/plugin-plugins": "^4.0.0",
     "@octokit/rest": "^20.0.2",
     "chalk": "^5.4.1",
+    "openai": "^4.80.0",
     "ora": "^8.1.1"
   },
   "devDependencies": {

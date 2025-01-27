@@ -213,3 +213,6 @@ oclif.manifest.json
 # Temporary files
 tmp/
 temp/
+
+# App specific
+.recap-ai.config.json
