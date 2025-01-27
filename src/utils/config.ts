@@ -1,6 +1,4 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
 
 interface Config {
   github?: {
@@ -36,11 +34,15 @@ interface Config {
       limit?: number;
     };
   };
+  openai?: {
+    token?: string;
+  };
   [key: string]: any;
 }
 
 export class ConfigManager {
   private config: Config;
+  private configPath: string = '.recap-ai.config.json';
 
   constructor() {
     this.config = this.loadConfig();
@@ -93,9 +95,8 @@ export class ConfigManager {
 
   private loadConfig(): Config {
     try {
-      const configPath = path.join(os.homedir(), '.recap-cli', 'config.json');
-      if (fs.existsSync(configPath)) {
-        const data = fs.readFileSync(configPath, 'utf8');
+      if (fs.existsSync(this.configPath)) {
+        const data = fs.readFileSync(this.configPath, 'utf8');
         return JSON.parse(data);
       }
     } catch (error) {
@@ -106,21 +107,14 @@ export class ConfigManager {
 
   private save(): void {
     try {
-      const configPath = path.join(os.homedir(), '.recap-cli', 'config.json');
-      const configDir = path.dirname(configPath);
-
-      if (!fs.existsSync(configDir)) {
-        fs.mkdirSync(configDir, { recursive: true });
-      }
-
-      fs.writeFileSync(configPath, JSON.stringify(this.config, null, 2));
+      fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
     } catch (error) {
       console.error('Error saving config:', error);
       throw error;
     }
   }
 
-  parseTimeframe(timeframe: string): Date {
+  parseTimeframe(timeframe: string): { startDate: Date; endDate: Date } {
     const match = timeframe.match(/^(\d+)([dwmy])$/);
     if (!match) {
       throw new Error(
@@ -129,25 +123,26 @@ export class ConfigManager {
     }
 
     const [, amount, unit] = match;
-    const now = new Date();
+    const endDate = new Date();
+    const startDate = new Date();
     const value = parseInt(amount, 10);
 
     switch (unit) {
       case 'd':
-        now.setDate(now.getDate() - value);
+        startDate.setDate(startDate.getDate() - value);
         break;
       case 'w':
-        now.setDate(now.getDate() - value * 7);
+        startDate.setDate(startDate.getDate() - value * 7);
         break;
       case 'm':
-        now.setMonth(now.getMonth() - value);
+        startDate.setMonth(startDate.getMonth() - value);
         break;
       case 'y':
-        now.setFullYear(now.getFullYear() - value);
+        startDate.setFullYear(startDate.getFullYear() - value);
         break;
     }
 
-    return now;
+    return { startDate, endDate };
   }
 }
 

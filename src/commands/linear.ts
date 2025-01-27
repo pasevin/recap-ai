@@ -119,16 +119,17 @@ export default class Linear extends Command {
         teamId: flags['team-id'] || defaults.teamId,
       });
 
-      const data = await linearService.fetchData({
+      const options = {
+        teamId: flags['team-id'] || defaults.teamId,
         since,
         until,
-        teamId: flags['team-id'] || defaults.teamId,
-        assignee: flags.assignee || defaults.assignee,
-        author: flags.author,
-        state: (flags.state || defaults.state) as 'open' | 'closed' | 'all',
+        state: flags.state,
+        assignee: flags.author,
         label: flags.label,
-        priority: flags.priority,
-      });
+        limit: flags.limit,
+      };
+
+      const data = await linearService.fetchData(options);
 
       // Format output
       let output: string;
