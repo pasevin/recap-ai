@@ -13,24 +13,31 @@ export default class Config extends Command {
     '$ recap config setup',
     '$ recap config set github.token YOUR_TOKEN',
     '$ recap config set linear.token YOUR_TOKEN',
+    '$ recap config set openai.token YOUR_TOKEN',
     '$ recap config get github.token',
     '$ recap config get linear.token',
+    '$ recap config get openai.token',
     '$ recap config github',
     '$ recap config linear',
+    '$ recap config openai',
   ];
 
   static flags = {
     setup: Flags.boolean({
       description: 'Run the setup wizard',
-      exclusive: ['github', 'linear'],
+      exclusive: ['github', 'linear', 'openai'],
     }),
     github: Flags.boolean({
       description: 'Configure GitHub settings',
-      exclusive: ['setup', 'linear'],
+      exclusive: ['setup', 'linear', 'openai'],
     }),
     linear: Flags.boolean({
       description: 'Configure Linear settings',
-      exclusive: ['setup', 'github'],
+      exclusive: ['setup', 'github', 'openai'],
+    }),
+    openai: Flags.boolean({
+      description: 'Configure OpenAI settings',
+      exclusive: ['setup', 'github', 'linear'],
     }),
   };
 
@@ -68,6 +75,11 @@ export default class Config extends Command {
       return;
     }
 
+    if (flags.openai) {
+      await this.configureOpenAI();
+      return;
+    }
+
     if (args.action === 'get') {
       if (!args.key) {
         this.error('Please provide a key to get');
@@ -93,7 +105,7 @@ export default class Config extends Command {
     }
 
     this.error(
-      'Please provide a valid action (get/set) or use --setup/--github/--linear flags'
+      'Please provide a valid action (get/set) or use --setup/--github/--linear/--openai flags'
     );
   }
 
@@ -119,6 +131,15 @@ export default class Config extends Command {
       await this.configureLinear();
     }
 
+    const shouldConfigureOpenAI = await confirm({
+      message: 'Would you like to configure OpenAI?',
+      default: true,
+    });
+
+    if (shouldConfigureOpenAI) {
+      await this.configureOpenAI();
+    }
+
     this.log(chalk.green('\nSetup complete! You can now use recap-ai.'));
   }
 
@@ -135,6 +156,22 @@ export default class Config extends Command {
     const token = await password({
       message: 'Enter your GitHub Personal Access Token:',
       mask: '*',
+    });
+
+    const owner = await input({
+      message: 'Enter GitHub owner/organization name:',
+      validate: (value: string) => {
+        if (!value) return 'Owner name is required';
+        return true;
+      },
+    });
+
+    const repo = await input({
+      message: 'Enter GitHub repository name:',
+      validate: (value: string) => {
+        if (!value) return 'Repository name is required';
+        return true;
+      },
     });
 
     const timeframe = await input({
@@ -195,6 +232,8 @@ export default class Config extends Command {
     }
 
     config.set('github.token', token);
+    config.set('github.owner', owner);
+    config.set('github.repo', repo);
     config.set('github.defaults', {
       timeframe,
       branch: branch || undefined,
@@ -296,5 +335,21 @@ export default class Config extends Command {
     });
 
     this.log(chalk.green('\nLinear configuration saved!'));
+  }
+
+  private async configureOpenAI(): Promise<void> {
+    this.log(chalk.bold('\nOpenAI Configuration'));
+    this.log(
+      "You'll need your OpenAI API Key. You can create one at:\n" +
+        'https://platform.openai.com/api-keys\n'
+    );
+
+    const token = await password({
+      message: 'Enter your OpenAI API Key:',
+      mask: '*',
+    });
+
+    config.set('openai.token', token);
+    this.log(chalk.green('\nOpenAI configuration saved!'));
   }
 }
