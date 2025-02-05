@@ -5,60 +5,61 @@ import { ConfigManager } from '../utils/config';
  * Configuration options for the Linear service
  */
 export interface LinearConfig {
-  /** Linear API token */
-  token: string;
-  /** Team ID to use as default */
+  apiKey: string;
   teamId: string;
-  /** Timeframe to filter issues */
-  timeframe?: string;
-  /** Filter issues by state (e.g., 'open', 'closed', 'all') */
-  state?: string;
-  /** Filter issues by person */
-  person?: {
-    /** Person identifier */
-    identifier: string;
-    /** Include issues created by the person */
-    includeCreated?: boolean;
-    /** Include issues assigned to the person */
-    includeAssigned?: boolean;
-    /** Include issues commented by the person */
-    includeCommented?: boolean;
-    /** Include issues subscribed to by the person */
-    includeSubscribed?: boolean;
-    /** Include issues mentioned by the person */
-    includeMentioned?: boolean;
+  defaults: {
+    person: {
+      identifier: string;
+    };
   };
-  /** Maximum number of issues to fetch */
-  limit?: number;
 }
 
 /**
  * Options for fetching issues from Linear
  */
 export interface FetchOptions {
-  teamId?: string;
-  since?: Date;
-  until?: Date;
-  state?: string;
-  assignee?: string;
-  label?: string;
-  limit?: number;
-  search?: string;
+  timeframe: string;
 }
 
-// Define interfaces for our data types
-interface LinearIssue {
+/**
+ * Data type for a Linear issue
+ */
+export interface LinearIssue {
+  id: string;
+  identifier: string;
   title: string;
-  state: string;
+  state: {
+    name: string;
+    type: string;
+  };
   priority: number;
+  labels: {
+    nodes: Array<{
+      name: string;
+    }>;
+  };
+  cycle?: {
+    id: string;
+    number: number;
+    startsAt: string;
+    endsAt: string;
+  };
 }
 
-interface LinearSummary {
-  totalIssues: number;
-  openIssues: number;
-  closedIssues: number;
-  stateBreakdown: Record<string, number>;
-  priorityBreakdown: Record<number, number>;
+/**
+ * Data type for a Linear summary
+ */
+export interface LinearSummary {
+  issues: LinearIssue[];
+  activeIssues: LinearIssue[];
+}
+
+/**
+ * Data type for the response from fetching Linear issues
+ */
+export interface LinearIssueResponse {
+  issues: LinearIssue[];
+  activeIssues: LinearIssue[];
 }
 
 /**
@@ -94,15 +95,15 @@ export class LinearService {
         timeframe: this.timeframe,
       });
 
-      const issues = await this.fetchIssues(this.timeframe);
-      return this.generateSummary(issues);
+      const data = await this.fetchIssues(this.timeframe);
+      return data;
     } catch (error) {
       console.error('Error fetching Linear issues:', error);
       throw error;
     }
   }
 
-  private async fetchIssues(timeframe: string): Promise<LinearIssue[]> {
+  private async fetchIssues(timeframe: string): Promise<LinearIssueResponse> {
     const { startDate: since, endDate: until } =
       this.configManager.parseTimeframe(timeframe);
     const personIdentifier = this.configManager.get(
@@ -127,11 +128,59 @@ export class LinearService {
             first: 50
           ) {
             nodes {
+              id
+              identifier
               title
               state {
                 name
+                type
               }
               priority
+              labels {
+                nodes {
+                  name
+                }
+              }
+              cycle {
+                id
+                number
+                startsAt
+                endsAt
+              }
+            }
+          }
+        }
+        activeIssues: team(id: $teamId) {
+          issues(
+            filter: {
+              assignee: { email: { eq: "${personIdentifier}" } }
+              and: [
+                { state: { type: { in: ["started", "unstarted"] } } },
+                { state: { name: { nin: ["Merged", "Canceled", "Done"] } } }
+              ]
+            },
+            first: 50
+          ) {
+            nodes {
+              id
+              identifier
+              title
+              state {
+                name
+                type
+              }
+              priority
+              labels {
+                nodes {
+                  name
+                }
+              }
+              cycle {
+                id
+                number
+                startsAt
+                endsAt
+              }
             }
           }
         }
@@ -146,11 +195,12 @@ export class LinearService {
       {
         team: {
           issues: {
-            nodes: Array<{
-              title: string;
-              state: { name: string };
-              priority: number;
-            }>;
+            nodes: LinearIssue[];
+          };
+        };
+        activeIssues: {
+          issues: {
+            nodes: LinearIssue[];
           };
         };
       },
@@ -161,50 +211,16 @@ export class LinearService {
       throw new Error('No data returned from Linear API');
     }
 
-    const issues = response.data.team.issues;
-
-    // Transform the data
-    return issues.nodes.map((issue) => ({
-      title: issue.title,
-      state: issue.state.name,
-      priority: issue.priority || 0,
-    }));
+    return {
+      issues: response.data.team.issues.nodes,
+      activeIssues: response.data.activeIssues.issues.nodes,
+    };
   }
 
-  private generateSummary(issues: LinearIssue[]): LinearSummary {
-    // Basic statistics
-    const totalIssues = issues.length;
-    const openIssues = issues.filter(
-      (issue) => issue.state.toLowerCase() === 'open'
-    ).length;
-    const closedIssues = issues.filter(
-      (issue) => issue.state.toLowerCase() === 'closed'
-    ).length;
-
-    // State breakdown
-    const stateBreakdown = issues.reduce(
-      (acc, issue) => {
-        acc[issue.state] = (acc[issue.state] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-
-    // Priority breakdown
-    const priorityBreakdown = issues.reduce(
-      (acc, issue) => {
-        acc[issue.priority] = (acc[issue.priority] || 0) + 1;
-        return acc;
-      },
-      {} as Record<number, number>
-    );
-
+  private generateSummary(data: LinearIssueResponse): LinearSummary {
     return {
-      totalIssues,
-      openIssues,
-      closedIssues,
-      stateBreakdown,
-      priorityBreakdown,
+      issues: data.issues,
+      activeIssues: data.activeIssues,
     };
   }
 
@@ -252,7 +268,9 @@ export class LinearService {
     if (issues.length > 0) {
       summary += '## Linear Issues\n\n';
       issues.forEach((issue) => {
-        summary += `- ${issue.title} (${issue.state}, Priority: ${issue.priority})\n`;
+        const labels = issue.labels.nodes.map((node) => node.name);
+        const isBug = labels.includes('Bug');
+        summary += `- ${issue.title} (${issue.state.name}, Priority: ${issue.priority})${isBug ? ' 🐛' : ''} [${labels.join(', ')}]\n`;
       });
     }
 

@@ -3,6 +3,8 @@ import * as fs from 'fs';
 interface Config {
   github?: {
     token?: string;
+    owner?: string;
+    repo?: string;
     defaults?: {
       timeframe?: string;
       branch?: string;
@@ -50,9 +52,22 @@ export class ConfigManager {
 
   get(key: string): any {
     try {
-      console.log(`Getting config for key: ${key}`);
       const value = this.getNestedValue(this.config, key);
-      console.log(`Config value:`, value);
+
+      // Only log non-sensitive, user-relevant information
+      if (key === 'github.defaults.timeframe') {
+        console.log(`Using time period: ${value}`);
+      } else if (key === 'github.owner' && value) {
+        const repo = this.config.github?.repo;
+        if (repo) {
+          console.log(`Using GitHub repository: ${value}/${repo}`);
+        }
+      } else if (key === 'github.defaults.person.identifier') {
+        console.log(`Fetching activity for user: ${value}`);
+      } else if (key === 'linear.defaults.teamId') {
+        console.log(`Using Linear team: ${value}`);
+      }
+
       return value;
     } catch (error) {
       console.error(`Error getting config for key ${key}:`, error);

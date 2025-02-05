@@ -41,20 +41,25 @@ export default class Summarize extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(Summarize);
 
+    // Get the default timeframe once
+    const defaultTimeframe = config.get('github.defaults.timeframe') || '1w';
+
+    // Get GitHub info once
+    const githubOwner = config.get('github.owner');
+    const githubRepo = config.get('github.repo');
+    const githubUser = config.get('github.defaults.person.identifier');
+
     // Initialize services
     const githubService = new GitHubService({
       token: config.get('github.token'),
-      owner: config.get('github.owner'),
-      repo: config.get('github.repo'),
+      owner: githubOwner,
+      repo: githubRepo,
     });
-
-    // Get the configured GitHub user
-    const githubUser = config.get('github.defaults.person.identifier');
 
     const linearService = new LinearService(
       config.get('linear.token'),
       config.get('linear.defaults.teamId'),
-      config.get('github.defaults.timeframe') || '1w'
+      defaultTimeframe
     );
     const openaiService = new OpenAIService(config);
 
@@ -66,9 +71,8 @@ export default class Summarize extends Command {
       since = new Date(flags.since);
       until = new Date(flags.until);
     } else {
-      // Use default timeframe from config (defaulting to 1w if not set)
-      const timeframe = config.get('github.defaults.timeframe') || '1w';
-      const { startDate, endDate } = config.parseTimeframe(timeframe);
+      // Use default timeframe from config
+      const { startDate, endDate } = config.parseTimeframe(defaultTimeframe);
       since = startDate;
       until = endDate;
     }
@@ -81,14 +85,9 @@ export default class Summarize extends Command {
     const days = Math.ceil(
       (until.getTime() - since.getTime()) / (1000 * 60 * 60 * 24)
     );
-    const timeframe =
-      days <= 7
-        ? 'the past week'
-        : days <= 14
-          ? 'the past two weeks'
-          : days <= 31
-            ? 'the past month'
-            : `the period from ${since.toISOString().split('T')[0]} to ${until.toISOString().split('T')[0]}`;
+    const timeframe = `the past ${days} days`;
+
+    console.log(`\nGenerating activity summary for ${timeframe}...\n`);
 
     try {
       // Fetch GitHub data with user filter
@@ -99,11 +98,7 @@ export default class Summarize extends Command {
       });
 
       // Fetch Linear data
-      const linearSummary = await linearService.fetchData();
-
-      // Get GitHub repo info once
-      const githubOwner = config.get('github.owner');
-      const githubRepo = config.get('github.repo');
+      const linearData = await linearService.fetchData();
 
       // Prepare activity data
       const activityData: ActivityData = {
@@ -124,13 +119,8 @@ export default class Summarize extends Command {
           })),
         },
         linear: {
-          summary: {
-            totalIssues: linearSummary.totalIssues,
-            openIssues: linearSummary.openIssues,
-            closedIssues: linearSummary.closedIssues,
-            stateBreakdown: linearSummary.stateBreakdown,
-            priorityBreakdown: linearSummary.priorityBreakdown,
-          },
+          issues: linearData.issues,
+          activeIssues: linearData.activeIssues,
         },
       };
 

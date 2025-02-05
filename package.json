@@ -13,6 +13,7 @@
     "lint": "eslint . --ext .ts",
     "postpack": "rimraf oclif.manifest.json",
     "prepack": "rimraf dist && bun run build && oclif manifest",
+    "test": "bun test",
     "dev": "./bin/run.js"
   },
   "engines": {
@@ -41,14 +42,18 @@
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
+    "@types/jest": "^29.5.11",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "bun-types": "latest",
     "eslint": "^8.0.0",
+    "jest": "^29.7.0",
     "oclif": "^4.0.0",
     "prettier": "^3.0.0",
     "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.0.0"
   },
   "oclif": {
