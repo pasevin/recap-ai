@@ -216,3 +216,4 @@ temp/
 
 # App specific
 .recap-ai.config.json
+/.cursor

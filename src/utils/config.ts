@@ -5,6 +5,9 @@ interface Config {
     token?: string;
     owner?: string;
     repo?: string;
+    mcp?: {
+      url?: string;
+    };
     defaults?: {
       timeframe?: string;
       branch?: string;
@@ -77,7 +80,6 @@ export class ConfigManager {
 
   set(key: string, value: any): void {
     try {
-      console.log(`Setting config for key: ${key}`, value);
       this.setNestedValue(this.config, key, value);
       this.save();
       console.log('Config saved successfully');

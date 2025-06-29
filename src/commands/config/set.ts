@@ -1,5 +1,5 @@
 import { Args, Command } from '@oclif/core';
-import { Config } from '../../services/config';
+import { config } from '../../utils/config';
 
 export default class ConfigSet extends Command {
   static description = 'Set configuration values';
@@ -24,7 +24,6 @@ export default class ConfigSet extends Command {
 
   async run(): Promise<void> {
     const { args } = await this.parse(ConfigSet);
-    const config = new Config();
 
     // Validate key format
     if (!args.key.includes('.')) {
@@ -38,6 +37,7 @@ export default class ConfigSet extends Command {
       'github.token',
       'github.owner',
       'github.repo',
+      'github.mcp.url',
       'github.defaults',
       'linear.token',
       'linear.defaults',

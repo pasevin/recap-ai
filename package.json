@@ -32,11 +32,13 @@
     "@inquirer/password": "^4.0.6",
     "@inquirer/select": "^4.0.6",
     "@linear/sdk": "^37.0.0",
+    "@modelcontextprotocol/sdk": "^1.13.2",
     "@oclif/core": "^3.0.0",
     "@oclif/plugin-help": "^5.0.0",
     "@oclif/plugin-plugins": "^4.0.0",
     "@octokit/rest": "^20.0.2",
     "chalk": "^5.4.1",
+    "mcp-client": "^1.12.4",
     "openai": "^4.80.0",
     "ora": "^8.1.1"
   },
