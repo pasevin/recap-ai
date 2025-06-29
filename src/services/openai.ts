@@ -9,6 +9,21 @@ export interface ActivityData {
       message: string;
       date: string;
       author: string;
+      files?: Array<{
+        filename: string;
+        additions: number;
+        deletions: number;
+        changes: number;
+      }>;
+      pullRequest?: {
+        number: number;
+        title: string;
+        state: string;
+        reviews?: Array<{
+          state: string;
+          author: string;
+        }>;
+      };
     }>;
     pullRequests: Array<{
       title: string;
@@ -17,7 +32,46 @@ export interface ActivityData {
       mergedAt?: string;
       author: string;
       url: string;
+      labels?: string[];
+      reviewComments?: number;
+      comments?: number;
+      body?: string;
+      enhancedData?: {
+        filesChanged?: number;
+        linesAdded?: number;
+        linesDeleted?: number;
+        reviews?: any[];
+        comments?: any[];
+      };
     }>;
+    issues?: Array<{
+      title: string;
+      state: string;
+      createdAt: string;
+      closedAt?: string;
+      author: string;
+      url: string;
+      labels?: string[];
+      body?: string;
+      enhancedData?: {
+        commentCount?: number;
+        comments?: Array<{
+          author: string;
+          body: string;
+          created_at: string;
+        }>;
+      };
+    }>;
+    statistics?: {
+      totalCommits: number;
+      totalPRs: number;
+      totalIssues: number;
+      totalReviews: number;
+      avgFilesPerCommit: number;
+      avgLinesChanged: number;
+      topContributors: { author: string; count: number }[];
+      topLabels: { label: string; count: number }[];
+    };
   };
   linear?: {
     issues?: Array<{
@@ -41,27 +95,29 @@ export interface ActivityData {
         endsAt: string;
       };
     }>;
-    activeIssues?: Array<{
-      id: string;
-      identifier: string;
-      title: string;
-      state: {
-        name: string;
-        type: string;
-      };
-      priority: number;
-      labels: {
-        nodes: Array<{
-          name: string;
-        }>;
-      };
-      cycle?: {
-        id: string;
-        number: number;
-        startsAt: string;
-        endsAt: string;
-      };
-    }>;
+    activeIssues?:
+      | Array<{
+          id: string;
+          identifier: string;
+          title: string;
+          state: {
+            name: string;
+            type: string;
+          };
+          priority: number;
+          labels: {
+            nodes: Array<{
+              name: string;
+            }>;
+          };
+          cycle?: {
+            id: string;
+            number: number;
+            startsAt: string;
+            endsAt: string;
+          };
+        }>
+      | number; // Support both array and number for backwards compatibility
     summary?: {
       totalIssues: number;
       openIssues: number;
@@ -85,9 +141,29 @@ export class OpenAIService {
 
   async generateActivitySummary(
     data: ActivityData,
-    timeframe: string
+    timeframe: string,
+    enhanced: boolean = false
   ): Promise<string> {
-    const systemPrompt = `You are an engineer summarizing your own work from ${timeframe} in a team standup. 
+    const systemPrompt = enhanced
+      ? `You are an engineer summarizing your own work from ${timeframe} in a team standup. 
+    Write in first person ("I", "my", etc.) and keep it conversational but professional, like you're talking to your teammates.
+    
+    You have access to ENHANCED data including code reviews, file changes, and detailed PR information.
+    
+    Structure your update like this:
+    1. "Here's what I've shipped/completed this ${timeframe}..." (use the completed PRs and commits, mention significant code reviews)
+    2. "Key technical changes..." (highlight major file changes, additions/deletions from the statistics)
+    3. "I'm currently working on..." (list ALL Linear issues with state.type "started")
+    4. "I ran into these challenges..." (analyze PR reviews, comments, and technical issues)
+    5. "Next up in our current cycle..." (list ALL Linear issues with state.type "unstarted" from activeIssues)
+    
+    Important:
+    - Mention code review activity if significant
+    - Highlight major contributors if working with others
+    - Include metrics like average files changed per commit if relevant
+    - Use the enhanced statistics to provide insights about the development velocity
+    - Keep it concise but include technical details that would be relevant to the team`
+      : `You are an engineer summarizing your own work from ${timeframe} in a team standup. 
     Write in first person ("I", "my", etc.) and keep it conversational but professional, like you're talking to your teammates.
     
     Structure your update like this:
@@ -121,7 +197,7 @@ export class OpenAIService {
         : undefined,
     };
 
-    const userPrompt = this.formatActivityData(transformedData);
+    const userPrompt = this.formatActivityData(transformedData, enhanced);
 
     try {
       const response = await this.client.chat.completions.create({
@@ -131,7 +207,7 @@ export class OpenAIService {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: enhanced ? 2000 : 1500,
       });
 
       return response.choices[0].message.content || 'No summary generated';
@@ -141,11 +217,17 @@ export class OpenAIService {
     }
   }
 
-  private formatActivityData(data: ActivityData): string {
+  private formatActivityData(
+    data: ActivityData,
+    enhanced: boolean = false
+  ): string {
     const sections = [];
 
     // Add a summary count at the start
-    if (data.linear?.activeIssues) {
+    if (
+      data.linear?.activeIssues &&
+      typeof data.linear.activeIssues !== 'number'
+    ) {
       const inProgressIssues = data.linear.activeIssues.filter(
         (issue) => issue.state.type === 'started'
       );
@@ -161,12 +243,62 @@ Planned: ${plannedIssues.length} issues
 
     if (data.github) {
       sections.push('=== GITHUB ACTIVITY ===');
+
+      if (enhanced && data.github.statistics) {
+        sections.push('Statistics:');
+        sections.push(
+          `- Total Commits: ${data.github.statistics.totalCommits}`
+        );
+        sections.push(`- Total PRs: ${data.github.statistics.totalPRs}`);
+        sections.push(`- Total Issues: ${data.github.statistics.totalIssues}`);
+        sections.push(`- Code Reviews: ${data.github.statistics.totalReviews}`);
+        sections.push(
+          `- Avg Files/Commit: ${data.github.statistics.avgFilesPerCommit.toFixed(1)}`
+        );
+        sections.push(
+          `- Avg Lines Changed: ${data.github.statistics.avgLinesChanged.toFixed(0)}`
+        );
+
+        if (data.github.statistics.topContributors.length > 0) {
+          sections.push('\nTop Contributors:');
+          data.github.statistics.topContributors.forEach((contrib) => {
+            sections.push(`- ${contrib.author}: ${contrib.count} commits`);
+          });
+        }
+        sections.push('');
+      }
+
       if (data.github.commits.length > 0) {
         sections.push('Commits:');
         data.github.commits.forEach((commit) => {
           sections.push(
             `- ${commit.message} (${commit.author} on ${commit.date})`
           );
+
+          if (enhanced && commit.files) {
+            sections.push(`  Files changed: ${commit.files.length}`);
+            const totalAdditions = commit.files.reduce(
+              (sum, f) => sum + f.additions,
+              0
+            );
+            const totalDeletions = commit.files.reduce(
+              (sum, f) => sum + f.deletions,
+              0
+            );
+            sections.push(`  Lines: +${totalAdditions} -${totalDeletions}`);
+          }
+
+          if (enhanced && commit.pullRequest) {
+            sections.push(
+              `  PR: #${commit.pullRequest.number} - ${commit.pullRequest.title}`
+            );
+            if (commit.pullRequest.reviews) {
+              const approvals = commit.pullRequest.reviews.filter(
+                (r) => r.state === 'APPROVED'
+              ).length;
+              sections.push(`  Reviews: ${approvals} approvals`);
+            }
+          }
         });
       }
 
@@ -177,13 +309,110 @@ Planned: ${plannedIssues.length} issues
           sections.push(
             `  Created: ${pr.createdAt}${pr.mergedAt ? `, Merged: ${pr.mergedAt}` : ''}`
           );
+
+          // Include PR body/description if available and enhanced
+          if (enhanced && pr.body) {
+            const body = pr.body.substring(0, 300).replace(/\n/g, ' ');
+            sections.push(
+              `  Description: ${body}${pr.body.length > 300 ? '...' : ''}`
+            );
+          }
+
+          // Include enhanced data if available
+          if (enhanced && pr.enhancedData) {
+            const {
+              filesChanged,
+              linesAdded,
+              linesDeleted,
+              reviews,
+              comments,
+            } = pr.enhancedData;
+            if (filesChanged) {
+              sections.push(
+                `  Changes: ${filesChanged} files, +${linesAdded} -${linesDeleted} lines`
+              );
+            }
+            if (reviews && reviews.length > 0) {
+              const reviewSummary = reviews
+                .map((r: any) => `${r.user?.login || 'Unknown'}: ${r.state}`)
+                .join(', ');
+              sections.push(`  Reviews: ${reviewSummary}`);
+            }
+            if (comments && comments.length > 0) {
+              sections.push(`  Review Comments (sample):`);
+              comments.slice(0, 2).forEach((c: any) => {
+                const commentBody =
+                  c.body?.substring(0, 100).replace(/\n/g, ' ') || '';
+                sections.push(
+                  `    - ${c.user?.login || 'Unknown'}: ${commentBody}${c.body?.length > 100 ? '...' : ''}`
+                );
+              });
+            }
+          }
+
+          if (enhanced && pr.labels && pr.labels.length > 0) {
+            sections.push(`  Labels: ${pr.labels.join(', ')}`);
+          }
+          if (enhanced && (pr.reviewComments || pr.comments)) {
+            sections.push(
+              `  Engagement: ${pr.reviewComments || 0} review comments, ${pr.comments || 0} comments`
+            );
+          }
           sections.push(`  ${pr.url}`);
         });
       }
+
+      if (enhanced && data.github.issues && data.github.issues.length > 0) {
+        sections.push('\nIssues:');
+        data.github.issues.forEach((issue) => {
+          sections.push(`- ${issue.title} (${issue.state}) by ${issue.author}`);
+
+          // Include issue body/description if available
+          if (issue.body) {
+            const body = issue.body.substring(0, 300).replace(/\n/g, ' ');
+            sections.push(
+              `  Description: ${body}${issue.body.length > 300 ? '...' : ''}`
+            );
+          }
+
+          // Include enhanced data if available
+          if (issue.enhancedData) {
+            if (
+              issue.enhancedData.commentCount &&
+              issue.enhancedData.commentCount > 0
+            ) {
+              sections.push(
+                `  Discussion: ${issue.enhancedData.commentCount} comments`
+              );
+            }
+            if (
+              issue.enhancedData.comments &&
+              issue.enhancedData.comments.length > 0
+            ) {
+              sections.push(`  Recent Comments:`);
+              issue.enhancedData.comments.slice(0, 2).forEach((c: any) => {
+                const commentBody =
+                  c.body?.substring(0, 100).replace(/\n/g, ' ') || '';
+                sections.push(
+                  `    - ${c.author}: ${commentBody}${c.body?.length > 100 ? '...' : ''}`
+                );
+              });
+            }
+          }
+
+          if (issue.labels && issue.labels.length > 0) {
+            sections.push(`  Labels: ${issue.labels.join(', ')}`);
+          }
+        });
+      }
+
       sections.push('=== END GITHUB ACTIVITY ===\n');
     }
 
-    if (data.linear?.activeIssues) {
+    if (
+      data.linear?.activeIssues &&
+      typeof data.linear.activeIssues !== 'number'
+    ) {
       // Current work (in progress)
       const inProgressIssues = data.linear.activeIssues.filter(
         (issue) => issue.state.type === 'started'

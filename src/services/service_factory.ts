@@ -1,33 +1,25 @@
-import { config } from '../utils/config';
 import { GitHubMCPService } from './github_mcp';
+import { GitHubMCPEnhancedService } from './github_mcp_enhanced';
+import { config } from '../utils/config';
 
-export function createGitHubService(): GitHubMCPService | null {
-  const mcpUrl = config.get('github.mcp.url');
+export function createGitHubService(
+  enhanced: boolean = false
+): GitHubMCPService | GitHubMCPEnhancedService | null {
   const githubToken = config.get('github.token');
+  const mcpUrl = config.get('github.mcp.url');
 
-  if (mcpUrl && githubToken) {
-    try {
-      const service = new GitHubMCPService(mcpUrl, githubToken);
-      // Attempt to connect, but don't block. The service can handle its connection state.
-      service.connect().catch((error) => {
-        console.error(
-          'Failed to connect to GitHub MCP service in background:',
-          error
-        );
-      });
-      return service;
-    } catch (error) {
-      console.error('Failed to create GitHub MCP service:', error);
-      return null;
+  if (!githubToken || !mcpUrl) {
+    return null;
+  }
+
+  try {
+    if (enhanced) {
+      return new GitHubMCPEnhancedService(mcpUrl, githubToken);
+    } else {
+      return new GitHubMCPService(mcpUrl, githubToken);
     }
+  } catch (error) {
+    console.error('Failed to create GitHub MCP service: ', error);
+    return null;
   }
-
-  if (!githubToken) {
-    console.error(
-      'GitHub token not configured. Run `recap config set github.token YOUR_TOKEN`'
-    );
-  }
-
-  // Fallback to REST API will be handled here later.
-  return null;
 }
