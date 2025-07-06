@@ -60,15 +60,12 @@ export class ConfigManager {
       // Only log non-sensitive, user-relevant information
       if (key === 'github.defaults.timeframe') {
         console.log(`Using time period: ${value}`);
-      } else if (key === 'github.owner' && value) {
-        const repo = this.config.github?.repo;
-        if (repo) {
-          console.log(`Using GitHub repository: ${value}/${repo}`);
-        }
       } else if (key === 'github.defaults.person.identifier') {
-        console.log(`Fetching activity for user: ${value}`);
+        console.log(`Fetching GitHub activity for user: ${value}`);
       } else if (key === 'linear.defaults.teamId') {
         console.log(`Using Linear team: ${value}`);
+      } else if (key === 'linear.defaults.person.identifier' && value) {
+        console.log(`Fetching Linear issues for user: ${value}`);
       }
 
       return value;

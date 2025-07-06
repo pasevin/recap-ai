@@ -162,12 +162,17 @@ export class OpenAIService {
     - Highlight major contributors if working with others
     - Include metrics like average files changed per commit if relevant
     - Use the enhanced statistics to provide insights about the development velocity
-    - Keep it concise but include technical details that would be relevant to the team`
+    - Keep it concise but include technical details that would be relevant to the team
+    
+    CRITICAL: 
+    - ONLY use Linear issue identifiers (like PLAT-XXXX) that are EXPLICITLY provided in the data
+    - NEVER make up or invent Linear issue numbers
+    - If GitHub work doesn't have an associated Linear issue, DO NOT add a fake issue number`
       : `You are an engineer summarizing your own work from ${timeframe} in a team standup. 
     Write in first person ("I", "my", etc.) and keep it conversational but professional, like you're talking to your teammates.
     
     Structure your update like this:
-    1. "Here's what I've shipped/completed this ${timeframe}..." (use the completed PRs and commits)
+    1. "Here's what I've shipped/completed this ${timeframe}..." (use the completed PRs and commits - DO NOT add Linear issue numbers unless they are explicitly in the provided Linear data)
     2. "I'm currently working on..." (IMPORTANT: List ALL Linear issues that have state.type "started". You MUST include every single one, no exceptions. If there are any started issues, do not say there are none. NEVER say you can't provide Linear data - the data is provided in the user message.)
     3. "I ran into these challenges..." (analyze the work done and extract technical challenges)
     4. "Next up in our current cycle..." (IMPORTANT: List ALL Linear issues with state.type "unstarted" from activeIssues. You MUST list them all, grouped by priority. If there are any unstarted issues, do not say there are none. NEVER say you can't provide Linear data - the data is provided in the user message.)
@@ -179,12 +184,24 @@ export class OpenAIService {
     - Keep it concise but include technical details that would be relevant to the team
     - Be precise about the timeframe - this summary covers exactly ${timeframe}, not a general period
     
+    CRITICAL: 
+    - ONLY use Linear issue identifiers (like PLAT-XXXX) that are EXPLICITLY provided in the data
+    - NEVER make up or invent Linear issue numbers
+    - If GitHub work doesn't have an associated Linear issue, DO NOT add a fake issue number
+    - Only mention Linear issues when referring to the actual Linear data provided
+    
     Remember: 
     - The Linear data includes both regular issues and activeIssues - make sure to use activeIssues for current and planned work as these are from the current cycle
     - NEVER say there are no in-progress or planned tasks if there are issues with the corresponding state.type in the data
     - ALWAYS list ALL issues provided in the data - do not summarize or skip any
     - NEVER say you can't provide Linear data - the data is provided in the user message
-    - NEVER skip sections 2 or 4 - the Linear data is always provided in the user message`;
+    - NEVER skip sections 2 or 4 - the Linear data is always provided in the user message
+    
+    RULE FOR LINEAR ISSUE NUMBERS:
+    - Before using ANY Linear issue number (like PLAT-XXXX), verify it exists in the provided Linear data
+    - GitHub commits and PRs often DO NOT have associated Linear issues - that's normal
+    - When describing GitHub work in section 1, only add a Linear issue number if that exact issue exists in the Linear data
+    - It's perfectly fine to describe work without an issue number`;
 
     // Transform the data to match the expected format
     const transformedData = {
@@ -206,7 +223,7 @@ export class OpenAIService {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.7,
+        temperature: 0.1, // Lower temperature for more deterministic output
         max_tokens: enhanced ? 2000 : 1500,
       });
 
@@ -223,6 +240,21 @@ export class OpenAIService {
   ): string {
     const sections = [];
 
+    // Collect all valid Linear issue identifiers at the top
+    let validIdentifiers: string[] = [];
+    if (data.linear) {
+      const allLinearIssues = [
+        ...(data.linear.issues || []),
+        ...(typeof data.linear.activeIssues === 'object' &&
+        Array.isArray(data.linear.activeIssues)
+          ? data.linear.activeIssues
+          : []),
+      ];
+      validIdentifiers = [
+        ...new Set(allLinearIssues.map((issue) => issue.identifier)),
+      ];
+    }
+
     // Add a summary count at the start
     if (
       data.linear?.activeIssues &&
@@ -234,10 +266,14 @@ export class OpenAIService {
       const plannedIssues = data.linear.activeIssues.filter(
         (issue) => issue.state.type === 'unstarted'
       );
+
       sections.push(`=== LINEAR ISSUES SUMMARY ===
 Total Active Issues: ${data.linear.activeIssues.length}
 In Progress: ${inProgressIssues.length} issues
 Planned: ${plannedIssues.length} issues
+
+VALID LINEAR ISSUE IDENTIFIERS (ONLY use these - DO NOT make up any others):
+${validIdentifiers.join(', ')}
 === END SUMMARY ===\n`);
     }
 
@@ -271,8 +307,25 @@ Planned: ${plannedIssues.length} issues
       if (data.github.commits.length > 0) {
         sections.push('Commits:');
         data.github.commits.forEach((commit) => {
+          // Remove any invalid Linear issue IDs from commit message
+          let displayMessage = commit.message;
+          const linearIdPattern = /PLAT-\d+/g;
+          const matches = displayMessage.match(linearIdPattern);
+
+          if (matches) {
+            matches.forEach((match) => {
+              if (!validIdentifiers.includes(match)) {
+                // Remove the invalid Linear ID from the message
+                displayMessage = displayMessage.replace(
+                  match,
+                  '[INVALID-LINEAR-ID]'
+                );
+              }
+            });
+          }
+
           sections.push(
-            `- ${commit.message} (${commit.author} on ${commit.date})`
+            `- ${displayMessage} (${commit.author} on ${commit.date})`
           );
 
           if (enhanced && commit.files) {
@@ -305,7 +358,23 @@ Planned: ${plannedIssues.length} issues
       if (data.github.pullRequests.length > 0) {
         sections.push('\nPull Requests:');
         data.github.pullRequests.forEach((pr) => {
-          sections.push(`- ${pr.title} (${pr.state}) by ${pr.author}`);
+          // Remove any invalid Linear issue IDs from PR title
+          let displayTitle = pr.title;
+          const linearIdPattern = /PLAT-\d+/g;
+          const matches = displayTitle.match(linearIdPattern);
+
+          if (matches) {
+            matches.forEach((match) => {
+              if (!validIdentifiers.includes(match)) {
+                displayTitle = displayTitle.replace(
+                  match,
+                  '[INVALID-LINEAR-ID]'
+                );
+              }
+            });
+          }
+
+          sections.push(`- ${displayTitle} (${pr.state}) by ${pr.author}`);
           sections.push(
             `  Created: ${pr.createdAt}${pr.mergedAt ? `, Merged: ${pr.mergedAt}` : ''}`
           );
