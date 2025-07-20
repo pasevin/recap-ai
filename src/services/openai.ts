@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { OpenAI } from 'openai';
 import { Config } from './config';
 import { ConfigManager } from '../utils/config';
 
@@ -9,6 +9,7 @@ export interface ActivityData {
       message: string;
       date: string;
       author: string;
+      repository?: string;
       files?: Array<{
         filename: string;
         additions: number;
@@ -32,6 +33,7 @@ export interface ActivityData {
       mergedAt?: string;
       author: string;
       url: string;
+      repository?: string;
       labels?: string[];
       reviewComments?: number;
       comments?: number;
@@ -51,6 +53,7 @@ export interface ActivityData {
       closedAt?: string;
       author: string;
       url: string;
+      repository?: string;
       labels?: string[];
       body?: string;
       enhancedData?: {
@@ -151,17 +154,18 @@ export class OpenAIService {
     You have access to ENHANCED data including code reviews, file changes, and detailed PR information.
     
     Structure your update like this:
-    1. "Here's what I've shipped/completed this ${timeframe}..." (use the completed PRs and commits, mention significant code reviews)
-    2. "Key technical changes..." (highlight major file changes, additions/deletions from the statistics)
+    1. "Here's what I've shipped/completed this ${timeframe}..." (use the completed PRs and commits, ALWAYS mention the repository/project name for context)
+    2. "Key technical changes..." (focus on WHAT was changed and WHY, not line counts. Mention the specific features/fixes and their impact)
     3. "I'm currently working on..." (list ALL Linear issues with state.type "started")
     4. "I ran into these challenges..." (analyze PR reviews, comments, and technical issues)
     5. "Next up in our current cycle..." (list ALL Linear issues with state.type "unstarted" from activeIssues)
     
     Important:
+    - ALWAYS include the repository/project name when discussing PRs or commits
+    - When work spans multiple repositories, make this clear (e.g., "Across different projects...")
+    - Focus on the substance of changes (features, fixes, refactoring) rather than metrics
     - Mention code review activity if significant
-    - Highlight major contributors if working with others
-    - Include metrics like average files changed per commit if relevant
-    - Use the enhanced statistics to provide insights about the development velocity
+    - Highlight collaboration with other contributors when relevant
     - Keep it concise but include technical details that would be relevant to the team
     
     CRITICAL: 
@@ -172,12 +176,15 @@ export class OpenAIService {
     Write in first person ("I", "my", etc.) and keep it conversational but professional, like you're talking to your teammates.
     
     Structure your update like this:
-    1. "Here's what I've shipped/completed this ${timeframe}..." (use the completed PRs and commits - DO NOT add Linear issue numbers unless they are explicitly in the provided Linear data)
+    1. "Here's what I've shipped/completed this ${timeframe}..." (use the completed PRs and commits - ALWAYS mention the repository/project name. DO NOT add Linear issue numbers unless they are explicitly in the provided Linear data)
     2. "I'm currently working on..." (IMPORTANT: List ALL Linear issues that have state.type "started". You MUST include every single one, no exceptions. If there are any started issues, do not say there are none. NEVER say you can't provide Linear data - the data is provided in the user message.)
     3. "I ran into these challenges..." (analyze the work done and extract technical challenges)
     4. "Next up in our current cycle..." (IMPORTANT: List ALL Linear issues with state.type "unstarted" from activeIssues. You MUST list them all, grouped by priority. If there are any unstarted issues, do not say there are none. NEVER say you can't provide Linear data - the data is provided in the user message.)
     
     Important notes:
+    - ALWAYS include the repository/project name when discussing PRs or commits
+    - When work spans multiple repositories, make this clear (e.g., "Across different projects...")
+    - Focus on WHAT was changed and WHY, not file counts or line numbers
     - For current work (section 2), you MUST list EVERY SINGLE issue that has state.type "started". Never say there are no started issues if there are issues with state.type "started". NEVER say you can't provide Linear data - it's in the user message.
     - For planned work (section 4), you MUST list EVERY SINGLE issue with state.type "unstarted" from activeIssues, grouped by priority. Never say there are no unstarted issues if there are issues with state.type "unstarted". NEVER say you can't provide Linear data - it's in the user message.
     - Highlight bugs with 🐛 emoji and include their priority and labels
@@ -324,8 +331,10 @@ ${validIdentifiers.join(', ')}
             });
           }
 
+          // Include repository name if available
+          const repoInfo = commit.repository ? ` [${commit.repository}]` : '';
           sections.push(
-            `- ${displayMessage} (${commit.author} on ${commit.date})`
+            `- ${displayMessage}${repoInfo} (${commit.author} on ${commit.date})`
           );
 
           if (enhanced && commit.files) {
@@ -374,7 +383,20 @@ ${validIdentifiers.join(', ')}
             });
           }
 
-          sections.push(`- ${displayTitle} (${pr.state}) by ${pr.author}`);
+          // Extract repository name from URL or use provided repository field
+          let repoName = pr.repository;
+          if (!repoName && pr.url) {
+            // Extract from URL like https://github.com/owner/repo/pull/123
+            const urlMatch = pr.url.match(/github\.com\/([^/]+\/[^/]+)\//);
+            if (urlMatch) {
+              repoName = urlMatch[1];
+            }
+          }
+          const repoInfo = repoName ? ` [${repoName}]` : '';
+
+          sections.push(
+            `- ${displayTitle}${repoInfo} (${pr.state}) by ${pr.author}`
+          );
           sections.push(
             `  Created: ${pr.createdAt}${pr.mergedAt ? `, Merged: ${pr.mergedAt}` : ''}`
           );
@@ -387,20 +409,10 @@ ${validIdentifiers.join(', ')}
             );
           }
 
-          // Include enhanced data if available
+          // Include enhanced data if available - focus on substance, not metrics
           if (enhanced && pr.enhancedData) {
-            const {
-              filesChanged,
-              linesAdded,
-              linesDeleted,
-              reviews,
-              comments,
-            } = pr.enhancedData;
-            if (filesChanged) {
-              sections.push(
-                `  Changes: ${filesChanged} files, +${linesAdded} -${linesDeleted} lines`
-              );
-            }
+            const { reviews, comments } = pr.enhancedData;
+
             if (reviews && reviews.length > 0) {
               const reviewSummary = reviews
                 .map((r: any) => `${r.user?.login || 'Unknown'}: ${r.state}`)
@@ -434,7 +446,20 @@ ${validIdentifiers.join(', ')}
       if (enhanced && data.github.issues && data.github.issues.length > 0) {
         sections.push('\nIssues:');
         data.github.issues.forEach((issue) => {
-          sections.push(`- ${issue.title} (${issue.state}) by ${issue.author}`);
+          // Extract repository name from URL or use provided repository field
+          let repoName = issue.repository;
+          if (!repoName && issue.url) {
+            // Extract from URL like https://github.com/owner/repo/issues/123
+            const urlMatch = issue.url.match(/github\.com\/([^/]+\/[^/]+)\//);
+            if (urlMatch) {
+              repoName = urlMatch[1];
+            }
+          }
+          const repoInfo = repoName ? ` [${repoName}]` : '';
+
+          sections.push(
+            `- ${issue.title}${repoInfo} (${issue.state}) by ${issue.author}`
+          );
 
           // Include issue body/description if available
           if (issue.body) {
