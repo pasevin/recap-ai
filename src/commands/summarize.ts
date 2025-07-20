@@ -2,6 +2,7 @@ import { Command, Flags } from '@oclif/core';
 import { config } from '../utils/config';
 import { LinearService } from '../services/linear';
 import { OpenAIService, ActivityData } from '../services/openai';
+import { FormatterService } from '../services/formatter';
 import { createGitHubService } from '../services/service_factory';
 import ora from 'ora';
 
@@ -9,10 +10,12 @@ export default class Summarize extends Command {
   static description = 'Generate an AI summary of GitHub and Linear activity';
 
   static examples = [
-    '<%= config.bin %> summarize  # Global activity for configured user',
+    '<%= config.bin %> summarize  # Concise AI summary for configured user',
+    '<%= config.bin %> summarize --detailed  # Detailed summary with source references',
     '<%= config.bin %> summarize --author johndoe  # Global activity for specific user',
     '<%= config.bin %> summarize --repo owner/repo  # Repository-specific activity',
     '<%= config.bin %> summarize --since 2024-01-01 --until 2024-01-31',
+    '<%= config.bin %> summarize --format json  # Output raw data in JSON format',
   ];
 
   static flags = {
@@ -42,6 +45,12 @@ export default class Summarize extends Command {
       char: 'r',
       description:
         'Repository in the format owner/repo (limits search to specific repo)',
+    }),
+    detailed: Flags.boolean({
+      char: 'd',
+      description:
+        'Use detailed formatting with structured sections and source references',
+      default: false,
     }),
   };
 
@@ -288,16 +297,28 @@ export default class Summarize extends Command {
       };
 
       // Generate summary with enhanced context if available
-      const summary = await openaiService.generateActivitySummary(
+      const aiSummary = await openaiService.generateActivitySummary(
         activityData,
         timeframe,
         true
       );
 
       if (flags.format === 'json') {
-        this.log(JSON.stringify({ summary, data: activityData }, null, 2));
+        this.log(
+          JSON.stringify({ summary: aiSummary, data: activityData }, null, 2)
+        );
+      } else if (flags.detailed) {
+        // Use the enhanced formatter for detailed output with source references
+        const formatterService = new FormatterService();
+        const formattedSummary = formatterService.formatActivitySummary(
+          activityData,
+          aiSummary,
+          timeframe
+        );
+        this.log(formattedSummary);
       } else {
-        this.log(summary);
+        // Use the concise AI-only format
+        this.log(aiSummary);
       }
     } catch (error) {
       this.error('Failed to generate summary: ' + (error as Error).message);

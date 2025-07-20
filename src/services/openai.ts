@@ -224,17 +224,31 @@ export class OpenAIService {
     const userPrompt = this.formatActivityData(transformedData, enhanced);
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
+      const response = await this.client.responses.create({
+        model: 'gpt-4.1-mini',
+        input: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.1, // Lower temperature for more deterministic output
-        max_tokens: enhanced ? 2000 : 1500,
+        text: {
+          format: {
+            type: 'text',
+          },
+        },
+        reasoning: {},
+        temperature: 0.5,
+        tools: [],
+        top_p: 1,
+        max_output_tokens: enhanced ? 2000 : 1500,
+        store: true,
       });
 
-      return response.choices[0].message.content || 'No summary generated';
+      // Handle the new o4-mini response format
+      const outputText = (response as any).output_text;
+      if (outputText && typeof outputText === 'string') {
+        return outputText;
+      }
+      return 'No summary generated';
     } catch (error) {
       console.error('Error generating summary:', error);
       throw new Error('Failed to generate activity summary');
