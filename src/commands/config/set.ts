@@ -37,7 +37,6 @@ export default class ConfigSet extends Command {
       'github.token',
       'github.owner',
       'github.repo',
-      'github.mcp.url',
       'github.defaults',
       'linear.token',
       'linear.defaults',

@@ -90,11 +90,6 @@ export class LinearService {
    */
   async fetchData() {
     try {
-      console.log('Fetching issues with options:', {
-        teamId: this.teamId,
-        timeframe: this.timeframe,
-      });
-
       const data = await this.fetchIssues(this.timeframe);
       return data;
     } catch (error) {

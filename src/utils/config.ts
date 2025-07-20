@@ -5,9 +5,6 @@ interface Config {
     token?: string;
     owner?: string;
     repo?: string;
-    mcp?: {
-      url?: string;
-    };
     defaults?: {
       timeframe?: string;
       branch?: string;
@@ -58,15 +55,7 @@ export class ConfigManager {
       const value = this.getNestedValue(this.config, key);
 
       // Only log non-sensitive, user-relevant information
-      if (key === 'github.defaults.timeframe') {
-        console.log(`Using time period: ${value}`);
-      } else if (key === 'github.defaults.person.identifier') {
-        console.log(`Fetching GitHub activity for user: ${value}`);
-      } else if (key === 'linear.defaults.teamId') {
-        console.log(`Using Linear team: ${value}`);
-      } else if (key === 'linear.defaults.person.identifier' && value) {
-        console.log(`Fetching Linear issues for user: ${value}`);
-      }
+      // Config values retrieved silently
 
       return value;
     } catch (error) {

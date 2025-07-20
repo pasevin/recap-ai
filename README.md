@@ -1,250 +1,251 @@
 # Recap AI
 
-A modern CLI tool for aggregating and summarizing data from multiple services (GitHub, Linear) using AI to generate insightful activity reports.
+A modern CLI tool for aggregating and summarizing development activity from GitHub and Linear using AI to generate insightful reports and summaries.
 
-## Features
+## 🚀 Features
 
-- Fetch and analyze data from multiple services:
-  - GitHub Integration:
-    - Commits, PRs, reviews, and detailed metrics
-    - Comprehensive filtering options
-    - Rich metadata analysis
-  - Linear Integration:
-    - Issue tracking and cycle management
-    - Active and planned work tracking
-    - Priority and state analysis
-- AI-powered summarization:
-  - Smart activity summaries using GPT-4
-  - Contextual work updates
-  - Progress tracking and planning insights
-- Flexible output formats:
-  - Detailed JSON for programmatic use
-  - Human-readable summaries
-  - AI-generated standup reports
-- Advanced filtering capabilities:
-  - Time-based filtering (relative and absolute dates)
-  - State-based filtering
-  - Author/assignee filtering
-- Extensible plugin architecture
+### Multi-Service Integration
 
-## Prerequisites
+- **GitHub Integration**:
+  - Full repository analysis (commits, PRs, issues, reviews)
+  - Global user activity search across all repositories
+  - Enhanced data collection with intelligent commit-PR associations
+  - Comprehensive metrics and statistics
+- **Linear Integration**:
+  - Issue tracking and cycle management
+  - Team-based filtering and analysis
+  - Priority and state-based insights
+- **AI-Powered Summarization**:
+  - Smart activity summaries using OpenAI GPT models
+  - Contextual work updates and progress tracking
+  - Enhanced formatting with source references
+
+### Advanced Capabilities
+
+- **Flexible Output Formats**: JSON, summary, detailed enhanced output
+- **Intelligent Filtering**: Time-based, author-based, state-based filtering
+- **Configuration Management**: Interactive setup wizard and manual configuration
+- **Extensible Architecture**: Plugin-ready design with service factory pattern
+
+## 📋 Prerequisites
 
 - [Bun](https://bun.sh) >= 1.0.0
-- GitHub API token
-- Linear API token
-- OpenAI API token (for AI features)
+- GitHub Personal Access Token
+- Linear API Token
+- OpenAI API Key (for AI summarization features)
 
-## Installation
+## 🛠 Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/recap-ai.git
-cd recap-ai
-
-# Install dependencies
-bun install
-
-# Build the project
-bun run build
-
-# Link the CLI globally (optional)
-bun link
+# Install the CLI globally
+bun install -g recap-ai
 ```
 
-## Configuration
+## ⚙️ Configuration
 
-Set up your configuration using one of these methods:
+### Quick Setup (Recommended)
+
+Run the interactive setup wizard:
 
 ```bash
-# Interactive setup wizard (recommended)
 recap config --setup
+```
 
-# Configure services individually
-recap config --github
-recap config --linear
-recap config --openai
+### Manual Configuration
 
-# Manual configuration
-recap config set github.token YOUR_TOKEN
-recap config set linear.token YOUR_TOKEN
-recap config set openai.token YOUR_TOKEN
+```bash
+# Set API tokens
+recap config set github.token YOUR_GITHUB_TOKEN
+recap config set linear.token YOUR_LINEAR_TOKEN
+recap config set openai.token YOUR_OPENAI_TOKEN
 
-# View current settings
+# Configure GitHub defaults (optional)
+
+# Set defaults (optional)
+recap config set github.defaults.timeframe 1w
+recap config set github.defaults.person.identifier your-github-username
+recap config set linear.defaults.teamId YOUR_LINEAR_TEAM_ID
+recap config set linear.defaults.person.identifier your-email@example.com
+
+# View current configuration
 recap config get github.token
 recap config get linear.token
-recap config get openai.token
 ```
 
-### Service Configuration Options
+### Service-Specific Configuration
 
-#### GitHub Settings
+```bash
+# Configure individual services
+recap config --github    # GitHub-specific setup
+recap config --linear     # Linear-specific setup
+recap config --openai     # OpenAI-specific setup
+```
 
-- `token`: GitHub API token
-- `defaults`:
-  - `timeframe`: Default time period (e.g., "2w" for 2 weeks)
-  - `branch`: Default branch to analyze
-  - `author`: Default GitHub username to filter by
-  - `prState`: Default PR state ("open", "closed", "all")
+## 🎯 Usage
 
-#### Linear Settings
+### AI-Powered Activity Summaries
 
-- `token`: Linear API token
-- `teamId`: Your Linear team ID
-- `defaults`:
-  - `person.identifier`: Default user identifier (email)
-  - `timeframe`: Default time period
-  - `state`: Default issue state
-  - `limit`: Maximum number of issues to fetch (1-1000)
+Generate intelligent summaries combining GitHub and Linear activity:
 
-#### OpenAI Settings
+```bash
+# Default summary for configured user
+recap summarize
 
-- `token`: OpenAI API key (required for AI features)
+# Repository-specific activity summary
+recap summarize --repo owner/repo
 
-## Usage
+# Global user activity summary
+recap summarize --author johndoe
+
+# Custom date range
+recap summarize --since 2024-01-01 --until 2024-01-31
+
+# Detailed summary with source references
+recap summarize --detailed
+
+# JSON output for programmatic use
+recap summarize --format json
+```
 
 ### GitHub Integration
 
+#### Repository Analysis
+
 ```bash
-# Basic usage (uses configured defaults)
+# Basic repository analysis
 recap github --repo owner/repo
 
-# Specify timeframe
-recap github --repo owner/repo --timeframe 2w  # Last 2 weeks
-recap github --repo owner/repo --timeframe 1m  # Last month
-
-# Custom date range
-recap github --repo owner/repo --since 2024-01-01 --until 2024-01-31
+# With custom timeframe
+recap github --repo owner/repo --timeframe 2w
 
 # Filter by author and PR state
 recap github --repo owner/repo --author johndoe --pr-state open
 
-# Different output formats
-recap github --repo owner/repo --format json
-recap github --repo owner/repo --format summary
+# Custom date range
+recap github --repo owner/repo --since 2024-01-01 --until 2024-01-31
 
-# Save output to file
-recap github --repo owner/repo --output report.json
+# Enhanced data collection (now default behavior)
+recap github --repo owner/repo
 ```
 
-Available options:
+#### Global User Activity
 
-- `--repo, -r`: Repository in format owner/repo (required)
-- `--timeframe, -t`: Timeframe (e.g., 1d, 1w, 1m, 1y)
+```bash
+# Search user activity across all repositories
+recap github --author username --timeframe 1w
+
+# User activity with custom date range
+recap github --author username --since 2024-01-01 --until 2024-01-31
+```
+
+#### GitHub Command Options
+
+- `--repo, -r`: Repository in format owner/repo
+- `--timeframe, -t`: Time period (1d, 1w, 1m, 1y)
 - `--since, -s`: Start date (YYYY-MM-DD)
 - `--until, -u`: End date (YYYY-MM-DD)
 - `--branch, -b`: Branch name to analyze
-- `--author, -a`: Filter by author (use "none" to disable filtering)
+- `--author, -a`: Filter by author (use "none" to disable)
 - `--pr-state`: Filter PRs by state (open, closed, all)
 - `--format, -f`: Output format (json, summary)
-- `--output, -o`: Output file path
-
-#### GitHub Metrics
-
-The GitHub integration provides:
-
-- Basic Statistics
-
-  - Total commits and PRs
-  - Open/Closed/Merged PR counts
-  - Contribution statistics
-
-- Review Status
-
-  - Approved PRs
-  - Changes requested
-  - Commented
-  - Pending reviews
-  - Dismissed reviews
-
-- Time Metrics
-
-  - Average time to merge
-  - Average time to close
-  - PR velocity (PRs merged per day)
-
-- Code Changes
-
-  - Total additions/deletions
-  - Changed files
-  - Average PR size
-
-- Contributors
-
-  - Most active contributors
-  - Contribution counts
-
-- Labels
-  - Top used labels
-  - Label usage counts
+- `--output, -o`: Save output to file
 
 ### Linear Integration
 
 ```bash
-# Basic usage (uses configured defaults)
+# Basic Linear analysis (uses configured team)
 recap linear
 
 # Specify team ID
 recap linear --team-id TEAM_ID
 
-# Specify timeframe
-recap linear --timeframe 2w  # Last 2 weeks
-recap linear --timeframe 1m  # Last month
-
-# Custom date range
-recap linear --since 2024-01-01 --until 2024-01-31
-
 # Filter by assignee and state
 recap linear --assignee johndoe --state open
 
-# Filter by author and label
+# Filter by author and labels
 recap linear --author janedoe --label bug
 
-# Different output formats with timeframe
-recap linear --author janedoe --timeframe 1m --format json
+# Custom timeframe and priority filtering
+recap linear --timeframe 1m --priority 3
 
-# Limit number of issues
+# Limit results
 recap linear --limit 50
 ```
 
-Available options:
+#### Linear Command Options
 
 - `--team-id, -t`: Linear team ID
-- `--timeframe, -f`: Timeframe (e.g., 1d, 1w, 1m, 1y)
+- `--timeframe, -f`: Time period (1d, 1w, 1m, 1y)
 - `--since, -s`: Start date (YYYY-MM-DD)
 - `--until, -u`: End date (YYYY-MM-DD)
 - `--assignee, -a`: Filter by assignee
 - `--author`: Filter by issue creator
-- `--state`: Filter issues by state (open, closed, all)
+- `--state`: Filter by state (open, closed, all)
 - `--label, -l`: Filter by label
 - `--priority, -p`: Filter by priority (0-4)
 - `--format, -f`: Output format (json, summary)
-- `--output, -o`: Output file path
-- `--limit, -n`: Maximum number of issues to fetch (1-100, default: 100)
+- `--output, -o`: Save output to file
+- `--limit, -n`: Maximum issues to fetch (1-100)
 
-### AI-Powered Summaries
+## 🔧 Advanced Features
 
-```bash
-# Generate summary with default timeframe
-recap summarize
+### Enhanced GitHub Integration
 
-# Custom date range
-recap summarize --since 2024-01-01 --until 2024-01-31
+Recap AI provides intelligent data collection and analysis:
 
-# Filter by author
-recap summarize --author "John Doe"
+- **Smart Data Association**: Automatic commit-PR linking and relationship mapping
+- **Cross-Repository Activity**: Comprehensive user activity tracking across repositories
+- **Optimized Performance**: Intelligent batching and rate limiting for API efficiency
+- **Rich Context**: Enhanced metadata collection for superior AI summarization
 
-# Output in JSON format
-recap summarize --format json
+### Configuration File Structure
+
+The configuration is stored in `.recap-ai.config.json`:
+
+```json
+{
+  "github": {
+    "token": "your_github_token",
+    "defaults": {
+      "timeframe": "1w",
+      "person": {
+        "identifier": "your-username"
+      },
+      "prState": "all"
+    }
+  },
+  "linear": {
+    "token": "your_linear_token",
+    "defaults": {
+      "teamId": "your_team_id",
+      "timeframe": "1w",
+      "person": {
+        "identifier": "your-email@example.com"
+      },
+      "limit": 100
+    }
+  },
+  "openai": {
+    "token": "your_openai_token"
+  }
+}
 ```
 
-Available options:
+### Output Formats
 
-- `--since, -s`: Start date (YYYY-MM-DD)
-- `--until, -u`: End date (YYYY-MM-DD)
-- `--author, -a`: Filter by author
-- `--format, -f`: Output format (text, json)
+#### Summary Format
 
-## Development
+Human-readable output with organized sections and key metrics.
+
+#### JSON Format
+
+Complete structured data for programmatic processing and integration.
+
+#### Enhanced/Detailed Format
+
+Comprehensive formatting with source references and enriched context for AI summaries.
+
+## 🧪 Development
 
 ```bash
 # Run in development mode
@@ -255,8 +256,50 @@ bun test
 
 # Lint code
 bun run lint
+
+# Clean build artifacts
+bun run clean
+
+# Build for production
+bun run build
 ```
 
-## License
+## 📖 API Reference
 
-MIT
+### Core Commands
+
+- `recap summarize` - Generate AI-powered activity summaries
+- `recap github` - Fetch and analyze GitHub data
+- `recap linear` - Fetch and analyze Linear data
+- `recap config` - Manage configuration settings
+
+### Service Architecture
+
+- **Service Factory**: Dynamic service creation and GitHub API integration
+- **Enhanced GitHub Service**: Intelligent data collection with commit-PR associations
+- **AI Service**: OpenAI integration for intelligent summarization
+- **Configuration Manager**: Centralized settings and defaults management
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For issues and questions:
+
+- Create an issue on GitHub
+- Check the documentation and examples above
+- Ensure your API tokens are properly configured
+
+---
+
+**Built with TypeScript, Bun, and oclif** • Powered by AI for intelligent development insights

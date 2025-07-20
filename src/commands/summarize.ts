@@ -60,8 +60,6 @@ export default class Summarize extends Command {
     // Get the default timeframe once
     const defaultTimeframe = config.get('github.defaults.timeframe') || '1w';
 
-    console.log(`Using time period: ${defaultTimeframe}`);
-
     // Get the GitHub user (from flag or config)
     const githubUser =
       flags.author ||
@@ -85,10 +83,6 @@ export default class Summarize extends Command {
       }
       githubOwner = repoParts[0];
       githubRepo = repoParts[1];
-      console.log(`Using GitHub repository: ${githubOwner}/${githubRepo}`);
-      console.log(`Filtering by user: ${githubUser}`);
-    } else {
-      console.log(`Fetching global GitHub activity for user: ${githubUser}`);
     }
 
     // Initialize services
@@ -98,12 +92,6 @@ export default class Summarize extends Command {
       defaultTimeframe
     );
     const openaiService = new OpenAIService(config);
-
-    // Log Linear configuration
-    const linearTeamId = config.get('linear.defaults.teamId');
-    if (linearTeamId) {
-      console.log(`Using Linear team: ${linearTeamId}`);
-    }
 
     // Calculate date range based on flags or default timeframe
     let since: Date;
@@ -129,33 +117,40 @@ export default class Summarize extends Command {
     );
     const timeframe = `the past ${days} days`;
 
-    console.log(`\nGenerating activity summary for ${timeframe}...\n`);
+    // Show clean summary of what we're doing
+    if (flags.repo) {
+      console.log(
+        `📊 Generating ${githubOwner}/${githubRepo} summary for ${githubUser} (${timeframe})`
+      );
+    } else {
+      console.log(
+        `📊 Generating activity summary for ${githubUser} (${timeframe})`
+      );
+    }
 
     try {
       let activityData: ActivityData;
-      const mcpService = createGitHubService();
-
-      if (!mcpService) {
-        throw new Error(
-          'GitHub MCP service is not configured. Please set github.token and github.mcp.url in your config.'
-        );
-      }
-
-      await mcpService.connect();
+      const githubService = createGitHubService();
 
       if (flags.repo) {
         // Repository-specific mode
-        console.log(
-          'Using GitHub MCP Service for repository-specific data collection...'
-        );
+        // Type guard to ensure we have enhanced service
+        if (!('fetchEnhancedRepositoryData' in githubService)) {
+          throw new Error('Enhanced GitHub service not available');
+        }
 
-        const enhancedData = await mcpService.fetchEnhancedRepositoryData(
+        const enhancedData = await githubService.fetchEnhancedRepositoryData(
           githubOwner!,
           githubRepo!,
-          since,
-          until,
-          undefined,
-          githubUser
+          {
+            since,
+            until,
+            author: githubUser,
+            includePRs: true,
+            includeIssues: true,
+            includeReviews: true,
+            maxResults: 100,
+          }
         );
 
         // Transform unified format to ActivityData format
@@ -223,20 +218,24 @@ export default class Summarize extends Command {
         };
       } else {
         // Global user activity mode (default)
-        const spinner = ora(
-          `Fetching global activity for user ${githubUser}...`
-        ).start();
-        console.log(
-          'Using GitHub MCP Service for global user activity search...'
-        );
+        const spinner = ora(`🔍 Fetching GitHub activity...`).start();
 
-        const activity = await mcpService.fetchEnhancedUserActivity(
+        // Type guard to ensure we have enhanced service
+        if (!('fetchEnhancedUserActivity' in githubService)) {
+          spinner.fail('Enhanced GitHub service not available');
+          throw new Error('Enhanced GitHub service not available');
+        }
+
+        const activity = await githubService.fetchEnhancedUserActivity(
           githubUser,
-          since,
-          until
+          {
+            since,
+            until,
+            maxResults: 100,
+          }
         );
 
-        spinner.stop();
+        spinner.succeed(`🔍 GitHub activity collected`);
 
         // Transform unified format to ActivityData format
         activityData = {
@@ -287,21 +286,28 @@ export default class Summarize extends Command {
         };
       }
 
-      await mcpService.disconnect();
-
       // Fetch Linear data
+      const linearSpinner = ora(`📋 Fetching Linear data...`).start();
       const linearData = await linearService.fetchData();
       activityData.linear = {
         issues: linearData.issues,
         activeIssues: linearData.activeIssues,
       };
+      linearSpinner.succeed(`📋 Linear data collected`);
 
       // Generate summary with enhanced context if available
+      const aiSpinner = ora(`🤖 Generating AI summary...`).start();
       const aiSummary = await openaiService.generateActivitySummary(
         activityData,
         timeframe,
         true
       );
+      aiSpinner.succeed(`🤖 Summary generated`);
+
+      // ASCII art separator
+      console.log('\n' + '═'.repeat(60));
+      console.log('                    📊 ACTIVITY RECAP                    ');
+      console.log('═'.repeat(60) + '\n');
 
       if (flags.format === 'json') {
         this.log(

@@ -111,25 +111,20 @@ export default class Linear extends Command {
         }
       } else if (flags.timeframe || defaults.timeframe) {
         // Fall back to timeframe if no explicit dates
-        since = config.parseTimeframe(flags.timeframe || defaults.timeframe);
+        const timeRange = config.parseTimeframe(
+          flags.timeframe || defaults.timeframe
+        );
+        since = timeRange.startDate;
+        until = timeRange.endDate;
       }
 
-      const linearService = new LinearService({
+      const linearService = new LinearService(
         token,
-        teamId: flags['team-id'] || defaults.teamId,
-      });
+        flags['team-id'] || defaults.teamId || '',
+        flags.timeframe || defaults.timeframe || '1w'
+      );
 
-      const options = {
-        teamId: flags['team-id'] || defaults.teamId,
-        since,
-        until,
-        state: flags.state,
-        assignee: flags.author,
-        label: flags.label,
-        limit: flags.limit,
-      };
-
-      const data = await linearService.fetchData(options);
+      const data = await linearService.fetchData();
 
       // Format output
       let output: string;

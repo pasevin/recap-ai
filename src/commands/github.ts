@@ -1,6 +1,5 @@
 import { Command, Flags } from '@oclif/core';
 import { createGitHubService } from '../services/service_factory';
-import { GitHubService } from '../services/github';
 import { config } from '../utils/config';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -101,16 +100,19 @@ export default class Github extends Command {
       // Check if we have a repo specified
       if (!flags.repo && flags.author) {
         // User activity mode - search across all repositories
-        const mcpService = createGitHubService();
-        if (mcpService) {
-          spinner.text = `Fetching activity for user ${flags.author}...`;
-          this.log('\nUsing GitHub MCP Service for user activity search');
+        const githubService = createGitHubService();
+        spinner.text = `Fetching activity for user ${flags.author}...`;
+        this.log('\nUsing Enhanced GitHub Service for user activity search');
 
-          await mcpService.connect();
-          const activity = await mcpService.fetchEnhancedUserActivity(
+        // Type guard to ensure we have enhanced service
+        if ('fetchEnhancedUserActivity' in githubService) {
+          const activity = await githubService.fetchEnhancedUserActivity(
             flags.author,
-            since,
-            until
+            {
+              since,
+              until,
+              maxResults: 100,
+            }
           );
           spinner.stop();
 
@@ -121,8 +123,11 @@ export default class Github extends Command {
             this.log(this.formatEnhancedSummary(activity));
           }
 
-          await mcpService.disconnect();
           return; // Exit after handling user activity
+        } else {
+          throw new Error(
+            'Enhanced GitHub service not available for user activity search'
+          );
         }
       }
 
@@ -139,49 +144,20 @@ export default class Github extends Command {
         throw new Error('Invalid repository format. Use owner/repo');
       }
 
-      const mcpService = createGitHubService();
-      if (mcpService) {
-        this.log('Using GitHub MCP Service');
+      const githubService = createGitHubService();
+      this.log('Using Enhanced GitHub Service');
 
-        await mcpService.connect();
-
-        const data = await mcpService.fetchEnhancedRepositoryData(
-          owner,
-          repo,
-          since,
-          until,
-          flags.branch || defaults.branch,
-          flags.author === 'none' ? undefined : flags.author || defaults.author
+      // Type guard to ensure we have enhanced service
+      if (!('fetchEnhancedRepositoryData' in githubService)) {
+        throw new Error(
+          'Enhanced GitHub service not available for repository analysis'
         );
+      }
 
-        // Format output
-        let output: string;
-        if (flags.format === 'json') {
-          output = JSON.stringify(data, null, 2);
-        } else {
-          // Enhanced summary format
-          output = this.formatEnhancedSummary(data);
-        }
-
-        // Output data
-        if (flags.output) {
-          fs.writeFileSync(flags.output, output);
-          spinner.succeed(chalk.green(`Data saved to ${flags.output}`));
-        } else {
-          spinner.stop();
-          this.log(output);
-        }
-
-        // Disconnect from MCP server
-        await mcpService.disconnect();
-      } else {
-        const githubService = new GitHubService({
-          token,
-          owner,
-          repo,
-        });
-
-        const data = await githubService.fetchData({
+      const data = await githubService.fetchEnhancedRepositoryData(
+        owner,
+        repo,
+        {
           since,
           until,
           branch: flags.branch || defaults.branch,
@@ -189,28 +165,29 @@ export default class Github extends Command {
             flags.author === 'none'
               ? undefined
               : flags.author || defaults.author,
-          prState: (flags['pr-state'] || defaults.prState) as
-            | 'open'
-            | 'closed'
-            | 'all',
-        });
-
-        // Format output
-        let output: string;
-        if (flags.format === 'json') {
-          output = JSON.stringify(data, null, 2);
-        } else {
-          output = this.formatSummary(data);
+          includePRs: true,
+          includeIssues: true,
+          includeReviews: true,
+          maxResults: 100,
         }
+      );
 
-        // Output data
-        if (flags.output) {
-          fs.writeFileSync(flags.output, output);
-          spinner.succeed(chalk.green(`Data saved to ${flags.output}`));
-        } else {
-          spinner.stop();
-          this.log(output);
-        }
+      // Format output
+      let output: string;
+      if (flags.format === 'json') {
+        output = JSON.stringify(data, null, 2);
+      } else {
+        // Enhanced summary format
+        output = this.formatEnhancedSummary(data);
+      }
+
+      // Output data
+      if (flags.output) {
+        fs.writeFileSync(flags.output, output);
+        spinner.succeed(chalk.green(`Data saved to ${flags.output}`));
+      } else {
+        spinner.stop();
+        this.log(output);
       }
     } catch (error) {
       spinner.fail(chalk.red('Failed to fetch data from GitHub'));
