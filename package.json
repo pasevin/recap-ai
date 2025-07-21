@@ -1,8 +1,34 @@
 {
   "name": "recap-ai",
   "description": "A modern CLI tool for aggregating and summarizing data from multiple services",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "dist/index.js",
+  "author": {
+    "name": "Aleksandr Pasevin",
+    "email": "pasevin@gmail.com",
+    "url": "https://github.com/pasevin"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pasevin/recap-ai.git"
+  },
+  "homepage": "https://github.com/pasevin/recap-ai#readme",
+  "bugs": {
+    "url": "https://github.com/pasevin/recap-ai/issues"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "github",
+    "linear",
+    "developer-tools",
+    "productivity",
+    "typescript",
+    "openai",
+    "activity-summary",
+    "development-workflow"
+  ],
   "bin": {
     "recap": "./bin/run.js"
   },
