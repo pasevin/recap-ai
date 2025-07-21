@@ -2,16 +2,18 @@
   "compilerOptions": {
     "declaration": true,
     "importHelpers": true,
-    "module": "ESNext",
+    "module": "CommonJS",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
-    "target": "ESNext",
+    "target": "ES2020",
     "moduleResolution": "node",
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"]
 }

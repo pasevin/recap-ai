@@ -1,5 +1,5 @@
 {
-  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "extends": ["eslint:recommended", "@typescript-eslint/recommended"],
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint"],
   "root": true,
@@ -18,5 +18,17 @@
       "error",
       { "argsIgnorePattern": "^_" }
     ]
-  }
+  },
+  "ignorePatterns": ["dist/", "node_modules/", "bin/", "*.js"],
+  "overrides": [
+    {
+      "files": ["*.js"],
+      "parser": "espree",
+      "parserOptions": {
+        "ecmaVersion": 2022,
+        "sourceType": "module"
+      },
+      "extends": ["eslint:recommended"]
+    }
+  ]
 }
