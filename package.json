@@ -1,7 +1,7 @@
 {
   "name": "recap-ai",
   "description": "A modern CLI tool for aggregating and summarizing data from multiple services",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "dist/index.js",
   "author": {
     "name": "Aleksandr Pasevin",
@@ -60,6 +60,7 @@
     "@oclif/core": "^3.0.0",
     "@oclif/plugin-help": "^5.0.0",
     "@oclif/plugin-plugins": "^4.0.0",
+    "@oclif/plugin-version": "^2.0.0",
     "@octokit/rest": "^20.0.2",
     "chalk": "^5.4.1",
     "openai": "^5.10.1",
@@ -87,7 +88,11 @@
     "commands": "./dist/commands",
     "plugins": [
       "@oclif/plugin-help",
-      "@oclif/plugin-plugins"
+      "@oclif/plugin-plugins",
+      "@oclif/plugin-version"
+    ],
+    "additionalVersionFlags": [
+      "-v"
     ],
     "topicSeparator": " ",
     "topics": {
