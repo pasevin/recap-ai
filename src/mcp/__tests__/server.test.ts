@@ -42,7 +42,8 @@ describe('RecapAIMCPServer', () => {
     expect(summaryTool).toBeDefined();
     expect(summaryTool!.inputSchema.properties).toHaveProperty('repository');
     expect(summaryTool!.inputSchema.properties).toHaveProperty('timeframe');
-    expect(summaryTool!.inputSchema.properties).toHaveProperty('author');
+    expect(summaryTool!.inputSchema.properties).toHaveProperty('authorGithub');
+    expect(summaryTool!.inputSchema.properties).toHaveProperty('authorLinear');
   });
 
   test('get_activity_data tool should have correct schema', () => {
@@ -51,6 +52,8 @@ describe('RecapAIMCPServer', () => {
     expect(dataTool).toBeDefined();
     expect(dataTool!.inputSchema.properties).toHaveProperty('repository');
     expect(dataTool!.inputSchema.properties).toHaveProperty('timeframe');
+    expect(dataTool!.inputSchema.properties).toHaveProperty('authorGithub');
+    expect(dataTool!.inputSchema.properties).toHaveProperty('authorLinear');
     expect(dataTool!.inputSchema.properties).toHaveProperty('format');
   });
 
