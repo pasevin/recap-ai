@@ -124,7 +124,9 @@ export default class Linear extends Command {
         flags.timeframe || defaults.timeframe || '1w'
       );
 
-      const data = await linearService.fetchData();
+      const data = await linearService.fetchData({
+        assignee: flags.assignee,
+      });
 
       // Format output
       let output: string;

@@ -12,7 +12,7 @@ export default class Summarize extends Command {
   static examples = [
     '<%= config.bin %> summarize  # Concise AI summary for configured user',
     '<%= config.bin %> summarize --detailed  # Detailed summary with source references',
-    '<%= config.bin %> summarize --author johndoe  # Global activity for specific user',
+    '<%= config.bin %> summarize --author-github john@company.com --author-linear john@company.com  # Cross-service filtering',
     '<%= config.bin %> summarize --repo owner/repo  # Repository-specific activity',
     '<%= config.bin %> summarize --since 2024-01-01 --until 2024-01-31',
     '<%= config.bin %> summarize --format json  # Output raw data in JSON format',
@@ -31,9 +31,15 @@ export default class Summarize extends Command {
         'End date (YYYY-MM-DD). If not provided, uses default timeframe from config',
       required: false,
     }),
-    author: Flags.string({
-      char: 'a',
-      description: 'Filter by author (defaults to configured user)',
+    'author-github': Flags.string({
+      description:
+        'GitHub username/email for filtering (must be used with --author-linear)',
+      dependsOn: ['author-linear'],
+    }),
+    'author-linear': Flags.string({
+      description:
+        'Linear email address for filtering (must be used with --author-github)',
+      dependsOn: ['author-github'],
     }),
     format: Flags.string({
       char: 'f',
@@ -62,13 +68,13 @@ export default class Summarize extends Command {
 
     // Get the GitHub user (from flag or config)
     const githubUser =
-      flags.author ||
+      flags['author-github'] ||
       config.get('github.defaults.person.identifier') ||
       config.get('github.defaults.author');
 
     if (!githubUser) {
       throw new Error(
-        'No GitHub user specified. Use --author flag or set github.defaults.person.identifier in config'
+        'No GitHub user specified. Use --author-github flag or set github.defaults.person.identifier in config'
       );
     }
 
@@ -288,7 +294,9 @@ export default class Summarize extends Command {
 
       // Fetch Linear data
       const linearSpinner = ora(`📋 Fetching Linear data...`).start();
-      const linearData = await linearService.fetchData();
+      const linearData = await linearService.fetchData({
+        assignee: flags['author-linear'],
+      });
       activityData.linear = {
         issues: linearData.issues,
         activeIssues: linearData.activeIssues,

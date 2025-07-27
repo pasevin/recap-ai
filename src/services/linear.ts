@@ -85,12 +85,38 @@ export class LinearService {
   }
 
   /**
+   * Validate Linear user identifier - strict mode
+   * @param authorOverride - Author provided by user (overrides config)
+   * @returns Linear email or undefined (falls back to config)
+   */
+  private validateLinearUser(authorOverride?: string): string | undefined {
+    if (!authorOverride) {
+      // No override provided, use config default
+      return undefined;
+    }
+
+    // User provided an override - it must be a valid email format for cross-service compatibility
+    if (!authorOverride.includes('@')) {
+      throw new Error(
+        `Invalid author identifier: "${authorOverride}". ` +
+          `When using --author flag, you must provide an EMAIL ADDRESS that works across all services:\n` +
+          `  - Linear: requires email addresses (e.g., user@company.com)\n` +
+          `  - GitHub: can use email or username, but email ensures consistency\n\n` +
+          `Use an email address instead of GitHub username for cross-service compatibility.`
+      );
+    }
+
+    return authorOverride;
+  }
+
+  /**
    * Fetches issues and generates summary statistics
+   * @param options - Optional filtering options
    * @returns Promise resolving to summary data
    */
-  async fetchData() {
+  async fetchData(options: { assignee?: string } = {}) {
     try {
-      const data = await this.fetchIssues(this.timeframe);
+      const data = await this.fetchIssues(this.timeframe, options);
       return data;
     } catch (error) {
       console.error('Error fetching Linear issues:', error);
@@ -98,12 +124,15 @@ export class LinearService {
     }
   }
 
-  private async fetchIssues(timeframe: string): Promise<LinearIssueResponse> {
+  private async fetchIssues(
+    timeframe: string,
+    options: { assignee?: string } = {}
+  ): Promise<LinearIssueResponse> {
     const { startDate: since, endDate: until } =
       this.configManager.parseTimeframe(timeframe);
-    const personIdentifier = this.configManager.get(
-      'linear.defaults.person.identifier'
-    );
+    const personIdentifier =
+      this.validateLinearUser(options.assignee) ||
+      this.configManager.get('linear.defaults.person.identifier');
 
     const query = `
       query($teamId: String!) {
