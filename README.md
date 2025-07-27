@@ -88,6 +88,8 @@ recap config --openai     # OpenAI-specific setup
 
 Generate intelligent summaries combining GitHub and Linear activity:
 
+> **Note**: The `summarize` command uses cross-service flags (`--author-github` + `--author-linear`) because it needs to work with both GitHub and Linear simultaneously. Individual service commands (`github`, `linear`) still use the simple `--author` flag.
+
 ```bash
 # Default summary for configured user
 recap summarize
@@ -95,8 +97,8 @@ recap summarize
 # Repository-specific activity summary
 recap summarize --repo owner/repo
 
-# Global user activity summary
-recap summarize --author johndoe
+# Cross-service user activity summary
+recap summarize --author-github john@company.com --author-linear john@company.com
 
 # Custom date range
 recap summarize --since 2024-01-01 --until 2024-01-31
@@ -107,6 +109,18 @@ recap summarize --detailed
 # JSON output for programmatic use
 recap summarize --format json
 ```
+
+#### Summarize Command Options
+
+- `--repo, -r`: Repository in format owner/repo (limits search to specific repo)
+- `--since, -s`: Start date (YYYY-MM-DD). If not provided, uses default timeframe from config
+- `--until, -u`: End date (YYYY-MM-DD). If not provided, uses default timeframe from config
+- `--author-github`: GitHub username/email for filtering (must be used with --author-linear)
+- `--author-linear`: Linear email address for filtering (must be used with --author-github)
+
+> **Note**: Author filtering requires both `--author-github` and `--author-linear` flags to ensure cross-service compatibility. Linear requires email addresses, while GitHub accepts usernames or emails.
+- `--format, -f`: Output format (text/json)
+- `--detailed, -d`: Use detailed formatting with structured sections and source references
 
 ### GitHub Integration
 
@@ -146,10 +160,12 @@ recap github --author username --since 2024-01-01 --until 2024-01-31
 - `--since, -s`: Start date (YYYY-MM-DD)
 - `--until, -u`: End date (YYYY-MM-DD)
 - `--branch, -b`: Branch name to analyze
-- `--author, -a`: Filter by author (use "none" to disable)
+- `--author, -a`: Filter by author (GitHub username or email)
 - `--pr-state`: Filter PRs by state (open, closed, all)
 - `--format, -f`: Output format (json, summary)
 - `--output, -o`: Save output to file
+
+> **GitHub Command**: Uses single `--author` flag since it only queries GitHub data.
 
 ### Linear Integration
 
@@ -179,14 +195,16 @@ recap linear --limit 50
 - `--timeframe, -f`: Time period (1d, 1w, 1m, 1y)
 - `--since, -s`: Start date (YYYY-MM-DD)
 - `--until, -u`: End date (YYYY-MM-DD)
-- `--assignee, -a`: Filter by assignee
-- `--author`: Filter by issue creator
+- `--assignee, -a`: Filter by assignee (Linear email address)
+- `--author`: Filter by issue creator (Linear email address)
 - `--state`: Filter by state (open, closed, all)
 - `--label, -l`: Filter by label
 - `--priority, -p`: Filter by priority (0-4)
 - `--format, -f`: Output format (json, summary)
 - `--output, -o`: Save output to file
 - `--limit, -n`: Maximum issues to fetch (1-100)
+
+> **Linear Command**: Uses single `--author` flag since it only queries Linear data. Requires email addresses.
 
 ## 🤖 MCP Integration (Model Context Protocol)
 
@@ -231,7 +249,8 @@ The MCP server exposes three powerful tools for AI agents:
 {
   repository?: string,     // GitHub repo (owner/repo format)
   timeframe?: "1d"|"1w"|"1m"|"1y",  // Time period
-  author?: string,         // Filter by specific user
+  authorGithub?: string,   // GitHub username/email (requires authorLinear)
+  authorLinear?: string,   // Linear email address (requires authorGithub)
   since?: string,          // Start date (YYYY-MM-DD)
   until?: string           // End date (YYYY-MM-DD)
 }
@@ -248,7 +267,8 @@ The MCP server exposes three powerful tools for AI agents:
 {
   repository?: string,     // GitHub repo (owner/repo format)
   timeframe?: "1d"|"1w"|"1m"|"1y",  // Time period
-  author?: string,         // Filter by specific user
+  authorGithub?: string,   // GitHub username/email (requires authorLinear)
+  authorLinear?: string,   // Linear email address (requires authorGithub)
   since?: string,          // Start date (YYYY-MM-DD)
   until?: string,          // End date (YYYY-MM-DD)
   format?: "enhanced"|"basic"       // Data collection mode
@@ -338,7 +358,8 @@ const summary = await client.callTool('get_activity_summary', {
 // Get comprehensive activity summary
 const summary = await client.callTool('get_activity_summary', {
   timeframe: '1w',
-  author: 'your-username',
+  authorGithub: 'your-username',
+  authorLinear: 'your-email@company.com',
 });
 
 // Returns AI-generated summary combining:
