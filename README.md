@@ -22,6 +22,7 @@ A modern CLI tool for aggregating and summarizing development activity from GitH
 
 ### Advanced Capabilities
 
+- **MCP Integration**: Full Model Context Protocol support for AI agent integration
 - **Flexible Output Formats**: JSON, summary, detailed enhanced output
 - **Intelligent Filtering**: Time-based, author-based, state-based filtering
 - **Configuration Management**: Interactive setup wizard and manual configuration
@@ -187,6 +188,232 @@ recap linear --limit 50
 - `--output, -o`: Save output to file
 - `--limit, -n`: Maximum issues to fetch (1-100)
 
+## 🤖 MCP Integration (Model Context Protocol)
+
+Recap AI supports MCP (Model Context Protocol) to expose its functionality to other AI agents and tools. This allows agents like Cursor, Claude Desktop, and other MCP-compatible clients to access development activity data directly.
+
+### MCP Server Management
+
+#### Start the MCP Server
+
+```bash
+# Start MCP server (runs on stdio transport)
+recap mcp start
+
+# Start with verbose logging
+recap mcp start --verbose
+```
+
+#### Check Server Status
+
+```bash
+# View configuration and integration status
+recap mcp status
+```
+
+#### Test Server Functionality
+
+```bash
+# Validate server setup and configuration
+recap mcp test
+```
+
+### Available MCP Tools
+
+The MCP server exposes three powerful tools for AI agents:
+
+#### 1. `get_activity_summary`
+
+**AI-powered development activity summaries combining GitHub and Linear data**
+
+```typescript
+// Parameters
+{
+  repository?: string,     // GitHub repo (owner/repo format)
+  timeframe?: "1d"|"1w"|"1m"|"1y",  // Time period
+  author?: string,         // Filter by specific user
+  since?: string,          // Start date (YYYY-MM-DD)
+  until?: string           // End date (YYYY-MM-DD)
+}
+
+// Returns comprehensive AI summary with metadata
+```
+
+#### 2. `get_activity_data`
+
+**Raw development activity data for custom analysis**
+
+```typescript
+// Parameters
+{
+  repository?: string,     // GitHub repo (owner/repo format)
+  timeframe?: "1d"|"1w"|"1m"|"1y",  // Time period
+  author?: string,         // Filter by specific user
+  since?: string,          // Start date (YYYY-MM-DD)
+  until?: string,          // End date (YYYY-MM-DD)
+  format?: "enhanced"|"basic"       // Data collection mode
+}
+
+// Returns structured GitHub + Linear data
+```
+
+#### 3. `get_configuration`
+
+**Safe configuration status and integration availability**
+
+```typescript
+// Parameters
+{
+  key?: string,            // Specific config key to retrieve
+  includeDefaults?: boolean // Include default values
+}
+
+// Returns configuration status (tokens hidden for security)
+```
+
+### Client Configuration Examples
+
+#### Cursor Configuration
+
+Add to your `.cursor/config.json`:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "recap-ai": {
+        "command": "recap",
+        "args": ["mcp", "start"]
+      }
+    }
+  }
+}
+```
+
+#### Claude Desktop Configuration
+
+Add to your Claude Desktop MCP config:
+
+```json
+{
+  "servers": {
+    "recap-ai": {
+      "command": "recap-mcp-server"
+    }
+  }
+}
+```
+
+#### Generic MCP Client
+
+```typescript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+// Connect to recap-ai MCP server
+const transport = new StdioClientTransport({
+  command: 'recap',
+  args: ['mcp', 'start'],
+});
+
+const client = new Client(
+  { name: 'my-client', version: '1.0.0' },
+  { capabilities: { tools: {} } }
+);
+
+await client.connect(transport);
+
+// Use tools
+const summary = await client.callTool('get_activity_summary', {
+  repository: 'owner/repo',
+  timeframe: '1w',
+});
+```
+
+### MCP Usage Examples
+
+#### Generate AI Summaries for Standups
+
+```typescript
+// Get comprehensive activity summary
+const summary = await client.callTool('get_activity_summary', {
+  timeframe: '1w',
+  author: 'your-username',
+});
+
+// Returns AI-generated summary combining:
+// - GitHub commits, PRs, issues
+// - Linear issues and progress
+// - Contextual work updates
+```
+
+#### Collect Raw Data for Analysis
+
+```typescript
+// Get structured activity data
+const data = await client.callTool('get_activity_data', {
+  repository: 'company/product',
+  timeframe: '1m',
+  format: 'enhanced',
+});
+
+// Returns detailed GitHub + Linear data for custom analysis
+```
+
+#### Check Integration Status
+
+```typescript
+// Check what's configured
+const config = await client.callTool('get_configuration', {});
+
+// Returns safe configuration status showing:
+// - Which integrations are configured (GitHub, Linear, OpenAI)
+// - Default settings (without exposing tokens)
+// - Available capabilities
+```
+
+### Security Features
+
+- **Token Protection**: API tokens are never exposed via MCP tools
+- **Safe Configuration**: Only non-sensitive config values can be retrieved
+- **Input Validation**: All tool parameters are validated against schemas
+- **Error Handling**: Comprehensive error handling with clear messages
+
+### Troubleshooting MCP Integration
+
+#### Server Won't Start
+
+```bash
+# Check configuration
+recap mcp status
+
+# Validate setup
+recap mcp test
+
+# Check for missing tokens
+recap config get github.token
+recap config get openai.token
+```
+
+#### Tools Not Working
+
+```bash
+# Verify server functionality
+recap mcp test
+
+# Check if at least one data source is configured
+recap mcp status
+
+# Test CLI functionality first
+recap summarize --timeframe 1w
+```
+
+#### Client Connection Issues
+
+- Ensure the MCP server process is running
+- Verify client configuration points to correct command/args
+- Check that recap-ai is installed and accessible in PATH
+
 ## 🔧 Advanced Features
 
 ### Enhanced GitHub Integration
@@ -272,6 +499,7 @@ bun run build
 - `recap github` - Fetch and analyze GitHub data
 - `recap linear` - Fetch and analyze Linear data
 - `recap config` - Manage configuration settings
+- `recap mcp` - Manage MCP server for AI agent integration
 
 ### Service Architecture
 

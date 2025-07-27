@@ -30,7 +30,8 @@
     "development-workflow"
   ],
   "bin": {
-    "recap": "./bin/run.js"
+    "recap": "./bin/run.js",
+    "recap-mcp-server": "./bin/mcp-server.js"
   },
   "scripts": {
     "build": "tsc -b",
@@ -39,7 +40,8 @@
     "postpack": "rimraf oclif.manifest.json",
     "prepack": "rimraf dist && bun run build && oclif manifest",
     "test": "bun test",
-    "dev": "./bin/run.js"
+    "dev": "./bin/run.js",
+    "mcp-server": "./bin/mcp-server.js"
   },
   "engines": {
     "bun": ">=1.0.0"
@@ -57,6 +59,7 @@
     "@inquirer/password": "^4.0.6",
     "@inquirer/select": "^4.0.6",
     "@linear/sdk": "^37.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "@oclif/core": "^3.0.0",
     "@oclif/plugin-help": "^5.0.0",
     "@oclif/plugin-plugins": "^4.0.0",
@@ -64,7 +67,8 @@
     "@octokit/rest": "^20.0.2",
     "chalk": "^5.4.1",
     "openai": "^5.10.1",
-    "ora": "^8.1.1"
+    "ora": "^8.1.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
@@ -104,6 +108,9 @@
       },
       "linear": {
         "description": "Fetch data from Linear"
+      },
+      "mcp": {
+        "description": "Manage MCP server for agent integration"
       }
     }
   }
