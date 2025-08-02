@@ -97,6 +97,7 @@ export const getActivityDataTool: RecapAITool = {
 
       // GitHub data collection
       if (args.repository || config.get('github.defaults.repository')) {
+        // Repository-specific mode
         const repo =
           args.repository || config.get('github.defaults.repository');
 
@@ -142,6 +143,33 @@ export const getActivityDataTool: RecapAITool = {
           throw new McpError(
             ErrorCode.InternalError,
             `Failed to fetch GitHub data: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      } else if (args.authorGithub) {
+        // User activity mode - search across all repositories when no repo specified but author provided
+        try {
+          const githubService = createGitHubService();
+
+          if ('fetchEnhancedUserActivity' in githubService) {
+            // Use EnhancedGitHubService for user activity search
+            result.data.github = await githubService.fetchEnhancedUserActivity(
+              args.authorGithub,
+              {
+                since,
+                until,
+                maxResults: 100,
+              }
+            );
+          } else {
+            throw new McpError(
+              ErrorCode.InternalError,
+              'Enhanced GitHub service not available for user activity search'
+            );
+          }
+        } catch (error) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to fetch GitHub user activity: ${error instanceof Error ? error.message : String(error)}`
           );
         }
       }

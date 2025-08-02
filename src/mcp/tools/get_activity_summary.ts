@@ -138,6 +138,39 @@ export const getActivitySummaryTool: RecapAITool = {
             `Failed to fetch GitHub data: ${error instanceof Error ? error.message : String(error)}`
           );
         }
+      } else if (args.authorGithub) {
+        // User activity mode - search across all repositories when no repo specified but author provided
+        try {
+          const githubService = createGitHubService();
+
+          if ('fetchEnhancedUserActivity' in githubService) {
+            const githubData = await githubService.fetchEnhancedUserActivity(
+              args.authorGithub,
+              {
+                since,
+                until,
+                maxResults: 100,
+              }
+            );
+
+            activityData.github = {
+              commits: githubData.commits,
+              pullRequests: githubData.pullRequests,
+              issues: githubData.issues,
+              statistics: githubData.statistics,
+            };
+          } else {
+            throw new McpError(
+              ErrorCode.InternalError,
+              'Enhanced GitHub service not available for user activity search'
+            );
+          }
+        } catch (error) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to fetch GitHub user activity: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
       }
 
       // Linear data (if configured)
