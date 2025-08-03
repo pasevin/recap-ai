@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+apps/web/.next/
+
+# Package manager files
+package-lock.json
+yarn.lock
+bun.lockb
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Generated files
+*.log
+coverage/
+.nyc_output/
+
+# Binaries
+bin/
+
+# Husky
+.husky/_
+
+# Lock files
+*.lock
+
+# Compiled TypeScript
+*.tsbuildinfo
+
+# Git
+.git/
