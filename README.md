@@ -119,7 +119,8 @@ recap summarize --format json
 - `--author-linear`: Linear email address for filtering (must be used with --author-github)
 
 > **Note**: Author filtering requires both `--author-github` and `--author-linear` flags to ensure cross-service compatibility. Linear requires email addresses, while GitHub accepts usernames or emails.
-- `--format, -f`: Output format (text/json)
+
+- `--format, -f`: Output format (summary/json)
 - `--detailed, -d`: Use detailed formatting with structured sections and source references
 
 ### GitHub Integration

@@ -17,6 +17,10 @@
   "bugs": {
     "url": "https://github.com/pasevin/recap-ai/issues"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "keywords": [
     "cli",
     "ai",
@@ -34,14 +38,33 @@
     "recap-mcp-server": "./bin/mcp-server.js"
   },
   "scripts": {
-    "build": "tsc -b",
-    "clean": "rimraf dist",
-    "lint": "eslint . --ext .ts",
-    "postpack": "rimraf oclif.manifest.json",
-    "prepack": "rimraf dist && bun run build && oclif manifest",
-    "test": "bun test",
+    "build": "bun run build:all",
+    "build:all": "bun run build:cli && bun run build:packages && bun run build:web",
+    "build:cli": "tsc -b",
+    "build:packages": "cd packages/shared && npm run build && cd ../core && npm run build",
+    "build:web": "cd apps/web && npm run build",
+    "build:check": "bun run build:check:cli && bun run build:check:packages && bun run build:check:web",
+    "build:check:cli": "tsc --noEmit",
+    "build:check:packages": "cd packages/shared && npx tsc --noEmit && cd ../core && npx tsc --noEmit",
+    "build:check:web": "cd apps/web && npx tsc --noEmit",
+    "clean": "rimraf dist && cd packages/shared && npm run clean && cd ../core && npm run clean && cd apps/web && rm -rf .next",
+    "clean:all": "bun run clean && cd apps/web && rm -rf node_modules && cd ../.. && rm -rf node_modules packages/*/node_modules apps/*/node_modules",
     "dev": "./bin/run.js",
-    "mcp-server": "./bin/mcp-server.js"
+    "dev:web": "cd apps/web && npm run dev",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "lint:all": "bun run lint && cd packages/shared && npm run lint && cd ../core && npm run lint && cd ../.. && cd apps/web && npm run lint",
+    "lint:all:fix": "bun run lint:fix && cd packages/shared && npm run lint:fix && cd ../core && npm run lint:fix && cd ../.. && cd apps/web && npm run lint -- --fix",
+    "mcp-server": "./bin/mcp-server.js",
+    "postpack": "rimraf oclif.manifest.json",
+    "prepack": "rimraf dist && bun run build:cli && oclif manifest",
+    "test": "bun test",
+    "test:all": "bun test && cd packages/shared && npm run test && cd ../core && npm run test",
+    "test:cli": "bun test",
+    "test:ci": "bun run test:cli --reporter=verbose --timeout=30000",
+    "prepare": "husky"
   },
   "engines": {
     "bun": ">=1.0.0"
@@ -74,13 +97,14 @@
     "@types/inquirer": "^9.0.7",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
     "bun-types": "latest",
-    "eslint": "^8.0.0",
+    "eslint": "^9.32.0",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "oclif": "^4.0.0",
-    "prettier": "^3.0.0",
+    "prettier": "^3.6.2",
     "rimraf": "^5.0.0",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.2",
