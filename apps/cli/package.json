@@ -1,7 +1,7 @@
 {
   "name": "@recap-ai/cli",
   "description": "Recap AI CLI application",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "main": "dist/index.js",
   "author": {
     "name": "Aleksandr Pasevin",
