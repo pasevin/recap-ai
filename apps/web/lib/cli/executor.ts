@@ -1,6 +1,7 @@
 // CLI command execution utilities
 import { spawn } from 'child_process';
 import path from 'path';
+import { existsSync } from 'fs';
 import { CLIError } from '../api/errors';
 
 export interface CLIResult {
@@ -20,13 +21,32 @@ export class CLIExecutor {
   private readonly defaultOptions: CLIExecutorOptions;
 
   constructor() {
-    // Navigate from apps/web to the monorepo root
-    const projectRoot = path.resolve(process.cwd(), '../../');
+    // Use robust path resolution that works in both dev and production contexts
+    // Find the project root by looking for package.json starting from current working directory
+    let projectRoot = process.cwd();
+
+    // If we're in a subdirectory (like apps/web or .next), navigate up to find project root
+    while (projectRoot !== path.dirname(projectRoot)) {
+      const packagePath = path.join(projectRoot, 'package.json');
+      const binPath = path.join(projectRoot, 'bin/run.js');
+
+      // Check if this directory contains both package.json and bin/run.js (project root markers)
+      if (existsSync(packagePath) && existsSync(binPath)) {
+        break;
+      }
+
+      projectRoot = path.dirname(projectRoot);
+    }
+
     this.cliPath = path.join(projectRoot, 'bin/run.js');
     this.defaultOptions = {
       timeout: 30000, // 30 seconds
       cwd: projectRoot, // Set working directory to the project root
-      env: process.env,
+      env: {
+        ...process.env,
+        // Ensure Node.js can find modules in the project root
+        NODE_PATH: path.join(projectRoot, 'node_modules'),
+      },
     };
   }
 
