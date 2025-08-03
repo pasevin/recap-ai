@@ -20,13 +20,19 @@ export class CLIExecutor {
   private readonly defaultOptions: CLIExecutorOptions;
 
   constructor() {
-    // Navigate from apps/web to the monorepo root
-    const projectRoot = path.resolve(process.cwd(), '../../');
+    // Use absolute path resolution to find the monorepo root
+    // Start from the current file location and navigate to project root
+    const currentDir = __dirname; // /path/to/recap-ai/apps/web/lib/cli
+    const projectRoot = path.resolve(currentDir, '../../../../'); // Go up 4 levels to reach project root
     this.cliPath = path.join(projectRoot, 'bin/run.js');
     this.defaultOptions = {
       timeout: 30000, // 30 seconds
       cwd: projectRoot, // Set working directory to the project root
-      env: process.env,
+      env: {
+        ...process.env,
+        // Ensure Node.js can find modules in the project root
+        NODE_PATH: path.join(projectRoot, 'node_modules'),
+      },
     };
   }
 
