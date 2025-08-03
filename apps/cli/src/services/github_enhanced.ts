@@ -641,13 +641,16 @@ export class EnhancedGitHubService {
     // Author statistics
     const authorCounts = new Map<string, number>();
     commits.forEach((commit) => {
-      const commitData = commit as {
-        commit?: { author?: { name?: string }; committer?: { name?: string } };
-      };
+      const enhancedCommit = commit as EnhancedCommitData;
+
+      // Extract author with proper priority: GitHub login > Git author name > Git author email > committer name
       const author =
-        commitData.commit?.author?.name ??
-        commitData.commit?.committer?.name ??
+        enhancedCommit.commit.author?.login ??
+        enhancedCommit.commit.commit?.author?.name ??
+        enhancedCommit.commit.commit?.author?.email ??
+        enhancedCommit.commit.commit?.committer?.name ??
         'Unknown';
+
       authorCounts.set(author, (authorCounts.get(author) ?? 0) + 1);
     });
 
