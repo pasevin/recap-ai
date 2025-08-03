@@ -6,6 +6,7 @@ export default [
   js.configs.recommended,
   {
     files: ['**/*.ts', '**/*.tsx'],
+    ignores: ['**/dist/**', '**/node_modules/**'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
@@ -82,6 +83,8 @@ export default [
       '**/*.js',
       'apps/web/.next/',
       'packages/*/dist/',
+      'apps/cli/dist/',
+      '**/dist/**/*.d.ts',
       'apps/cli/index.ts', // Not in TypeScript project
     ],
   },

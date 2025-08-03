@@ -1,4 +1,5 @@
 // GitHub API types - replacing any usage with proper interfaces
+import type { EnhancedCommitData } from './activity';
 
 export interface GitHubUser {
   login: string;
@@ -309,4 +310,5 @@ export interface GitHubEnhancedActivityData {
     topLabels: Array<{ label: string; count: number }>;
   };
   summary: string;
+  enhancedCommitData?: EnhancedCommitData[];
 }

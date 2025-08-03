@@ -3,10 +3,12 @@ import { createGitHubService } from '../services/service_factory';
 import { config } from '../utils/config';
 import {
   GitHubEnhancedActivityData,
-  GitHubCommit,
   GitHubPullRequest,
   GitHubIssue,
   GitHubLabel,
+  EnhancedPullRequest,
+  EnhancedIssue,
+  GitHubUser,
 } from '../interfaces/github-types';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -127,12 +129,27 @@ export default class Github extends Command {
           if (flags.format === 'json') {
             this.log(JSON.stringify(activity, null, 2));
           } else {
-            // Use the unified format output method
-            this.log(
-              this.formatEnhancedSummary(
-                activity as unknown as GitHubEnhancedActivityData
-              )
-            );
+            // Use the unified format output method - convert for user activity too
+            const enhancedData: GitHubEnhancedActivityData = {
+              commits: activity.commits?.map((ec) => ec.commit) ?? [],
+              pullRequests: activity.pullRequests as EnhancedPullRequest[],
+              issues: activity.issues as EnhancedIssue[],
+              codeReviews: activity.codeReviews,
+              userDetails: activity.userDetails as GitHubUser,
+              statistics: {
+                totalCommits: activity.statistics.totalCommits,
+                totalPRs: activity.statistics.totalPRs,
+                totalIssues: activity.statistics.totalIssues,
+                avgFilesPerCommit: activity.statistics.avgFilesPerCommit,
+                avgLinesChanged: activity.statistics.avgLinesChanged,
+                topContributors: activity.statistics.topContributors,
+                topRepositories: activity.summary?.topRepositories ?? [],
+                topLabels: activity.statistics.topLabels,
+              },
+              summary: JSON.stringify(activity.summary),
+              enhancedCommitData: activity.commits,
+            };
+            this.log(this.formatEnhancedSummary(enhancedData));
           }
 
           return; // Exit after handling user activity
@@ -189,10 +206,26 @@ export default class Github extends Command {
       if (flags.format === 'json') {
         output = JSON.stringify(data, null, 2);
       } else {
-        // Enhanced summary format
-        output = this.formatEnhancedSummary(
-          data as unknown as GitHubEnhancedActivityData
-        );
+        // Enhanced summary format - convert UnifiedActivityData to GitHubEnhancedActivityData
+        const enhancedData: GitHubEnhancedActivityData = {
+          commits: data.commits.map((ec) => ec.commit), // Extract GitHubCommit from EnhancedCommitData
+          pullRequests: data.pullRequests as EnhancedPullRequest[],
+          issues: data.issues as EnhancedIssue[],
+          codeReviews: data.codeReviews,
+          statistics: {
+            totalCommits: data.statistics.totalCommits,
+            totalPRs: data.statistics.totalPRs,
+            totalIssues: data.statistics.totalIssues,
+            avgFilesPerCommit: data.statistics.avgFilesPerCommit,
+            avgLinesChanged: data.statistics.avgLinesChanged,
+            topContributors: data.statistics.topContributors,
+            topRepositories: [], // Will be calculated from summary if needed
+            topLabels: data.statistics.topLabels,
+          },
+          summary: JSON.stringify(data.summary), // Convert ActivitySummary to string
+          enhancedCommitData: data.commits, // Keep original enhanced data for PR associations
+        };
+        output = this.formatEnhancedSummary(enhancedData);
       }
 
       // Output data
@@ -214,7 +247,14 @@ export default class Github extends Command {
   }
 
   private formatEnhancedSummary(data: GitHubEnhancedActivityData): string {
-    const { statistics, pullRequests, issues, commits, userDetails } = data;
+    const {
+      statistics,
+      pullRequests,
+      issues,
+      commits,
+      userDetails,
+      enhancedCommitData,
+    } = data;
     const summary = (data as unknown as Record<string, unknown>).summary as
       | {
           pullRequests?: { open?: number; merged?: number; closed?: number };
@@ -234,30 +274,38 @@ export default class Github extends Command {
     if (commits && commits.length > 0) {
       lines.push(chalk.blue(`Commits (${statistics.totalCommits}):`));
       // Show first 10 commits
-      commits.slice(0, 10).forEach((enhancedCommit: GitHubCommit) => {
-        // Enhanced commits have the actual commit in a 'commit' property
-        const commit = enhancedCommit.commit ?? enhancedCommit;
-
+      commits.slice(0, 10).forEach((commit) => {
         const sha = commit.sha?.substring(0, 7) ?? 'unknown';
-        const message = (enhancedCommit.commit?.message ?? '').split('\n')[0];
+        const message = commit.commit?.message?.split('\n')[0] ?? 'No message';
+
+        // Extract author with proper fallback priority
         const author =
-          (enhancedCommit.author as { login?: string })?.login ??
-          enhancedCommit.commit?.author?.name ??
+          commit.author?.login ??
+          commit.commit?.author?.name ??
+          commit.commit?.author?.email ??
           'Unknown';
+
         const date = new Date(
-          enhancedCommit.commit?.author?.date ??
-            enhancedCommit.commit?.committer?.date ??
-            (enhancedCommit as { created_at?: string }).created_at ??
+          commit.commit?.author?.date ??
+            commit.commit?.committer?.date ??
+            (commit as { created_at?: string }).created_at ??
             Date.now()
         ).toLocaleDateString();
 
         lines.push(`  ${chalk.yellow(sha)} ${message}`);
         lines.push(chalk.dim(`     by ${author} on ${date}`));
-        const commitWithPR = enhancedCommit as unknown as {
-          pullRequest?: { number: number };
-        };
-        if (commitWithPR.pullRequest) {
-          lines.push(chalk.dim(`     PR #${commitWithPR.pullRequest.number}`));
+
+        // Check for PR association from enhanced data
+        if (enhancedCommitData && Array.isArray(enhancedCommitData)) {
+          const enhancedCommit = enhancedCommitData.find(
+            (ec) =>
+              (ec as { commit?: { sha?: string } }).commit?.sha === commit.sha
+          ) as { pullRequest?: { number: number } } | undefined;
+          if (enhancedCommit?.pullRequest?.number) {
+            lines.push(
+              chalk.dim(`     PR #${enhancedCommit.pullRequest.number}`)
+            );
+          }
         }
         lines.push('');
       });
