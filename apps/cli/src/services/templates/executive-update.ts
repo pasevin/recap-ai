@@ -6,7 +6,7 @@ import { join } from 'path';
 const markdownTemplatePath = join(
   __dirname,
   'markdown-templates',
-  'executive-weekly.md'
+  'executive-update.md'
 );
 const markdownTemplateContent = readFileSync(markdownTemplatePath, 'utf-8');
 

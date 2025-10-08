@@ -7,8 +7,8 @@
 
 import { SummaryTemplate } from './types';
 import { defaultTemplate } from './default-template';
-import { executiveWeeklyTemplate } from './executive-weekly';
-import { individualWeeklyTemplate } from './individual-weekly';
+import { executiveWeeklyTemplate } from './executive-update';
+import { individualWeeklyTemplate } from './individual-update';
 import { selfReflectionPerformanceTemplate } from './self-reflection-performance';
 
 export class TemplateRegistry {
