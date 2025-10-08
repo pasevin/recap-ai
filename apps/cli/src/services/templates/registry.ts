@@ -7,6 +7,9 @@
 
 import { SummaryTemplate } from './types';
 import { defaultTemplate } from './default-template';
+import { executiveWeeklyTemplate } from './executive-weekly';
+import { individualWeeklyTemplate } from './individual-weekly';
+import { selfReflectionPerformanceTemplate } from './self-reflection-performance';
 
 export class TemplateRegistry {
   private templates: Map<string, SummaryTemplate> = new Map();
@@ -14,6 +17,10 @@ export class TemplateRegistry {
   constructor() {
     // Register default template
     this.register(defaultTemplate);
+    // Register additional templates
+    this.register(executiveWeeklyTemplate);
+    this.register(individualWeeklyTemplate);
+    this.register(selfReflectionPerformanceTemplate);
   }
 
   /**
