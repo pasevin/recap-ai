@@ -34,9 +34,9 @@ const parsed = parseFrontmatterJson(markdownTemplateContent);
 export const individualWeeklyTemplate: SummaryTemplate = {
   metadata: {
     id: 'individual-weekly-v1',
-    name: 'Individual Weekly',
+    name: 'Individual Update',
     description:
-      'Concise personal weekly update oriented around impact and priorities',
+      'Concise personal update oriented around impact and priorities',
     version: '1.0.0',
     useCases: ['personal-standups', 'weekly-updates'],
     formats: ['summary', 'markdown'],

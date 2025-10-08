@@ -49,7 +49,7 @@
   - Owner: [leader/partner]
   - Status: [pending/approved/in progress]
 
-## Next Week Focus
+## Next Period Focus
 
 - **[theme]** – [brief plan]
 

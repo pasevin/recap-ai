@@ -38,9 +38,9 @@ const parsed = parseFrontmatterJson(markdownTemplateContent);
 export const executiveWeeklyTemplate: SummaryTemplate = {
   metadata: {
     id: 'executive-weekly-v1',
-    name: 'Executive Weekly',
+    name: 'Executive Update',
     description:
-      'Leadership-focused weekly update emphasizing outcomes, risks, and asks',
+      'Leadership-focused update emphasizing outcomes, risks, and asks',
     version: '1.0.0',
     useCases: ['executive-reports', 'leadership-updates', 'status-reports'],
     formats: ['summary', 'markdown'],

@@ -14,7 +14,7 @@
 - **[work item]** – [status]
 - **[work item]** – [status]
 
-## Next Week Priorities
+## Next Period Priorities
 
 - **[priority]** – [expected outcome]
 
@@ -22,7 +22,7 @@
 
 - **[blocker]** – [owner/ask]
 
-## Learnings
+## Learnings & Insights
 
 - [brief learning or insight]
 
