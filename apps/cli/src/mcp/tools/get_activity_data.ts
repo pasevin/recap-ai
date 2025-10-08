@@ -5,6 +5,7 @@ import { RecapAITool, ActivityDataArgs, ActivityResult } from '../types.js';
 import {
   GitHubIssue,
   GitHubPullRequest,
+  GitHubUser,
 } from '../../interfaces/github-types.js';
 import { EnhancedCommitData } from '../../interfaces/activity.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
@@ -48,6 +49,12 @@ export const getActivityDataTool: RecapAITool = {
         default: 'basic',
         description:
           'Format of the activity data (enhanced includes more details).',
+      },
+      timeoutMs: {
+        type: 'number',
+        description: 'Maximum time in milliseconds to spend before failing',
+        minimum: 1000,
+        default: 60000,
       },
     },
     required: ['timeframe'],
@@ -125,7 +132,9 @@ export const getActivityDataTool: RecapAITool = {
                 message:
                   c.commit.commit?.message ?? c.commit.message ?? 'No message',
                 author:
-                  c.commit.author?.login ??
+                  (c.commit.author && 'login' in c.commit.author
+                    ? (c.commit.author as GitHubUser).login
+                    : null) ??
                   c.commit.commit?.author?.name ??
                   'Unknown',
                 date:
@@ -139,7 +148,10 @@ export const getActivityDataTool: RecapAITool = {
                   number: pr.number,
                   title: pr.title,
                   state: pr.state,
-                  author: pr.user?.login ?? 'Unknown',
+                  author:
+                    (pr.user && 'login' in pr.user
+                      ? (pr.user as GitHubUser).login
+                      : null) ?? 'Unknown',
                   createdAt: pr.created_at,
                   repository: `${githubOwner}/${githubRepo}`,
                 })
@@ -148,7 +160,10 @@ export const getActivityDataTool: RecapAITool = {
                 number: issue.number,
                 title: issue.title,
                 state: issue.state,
-                author: issue.user?.login ?? 'Unknown',
+                author:
+                  (issue.user && 'login' in issue.user
+                    ? (issue.user as GitHubUser).login
+                    : null) ?? 'Unknown',
                 createdAt: issue.created_at,
                 repository: `${githubOwner}/${githubRepo}`,
               })),

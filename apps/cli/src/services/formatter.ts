@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { ActivityData } from './openai';
-import { GitHubReview } from '../interfaces/github-types';
+import { GitHubReview, GitHubUser } from '../interfaces/github-types';
 
 export interface FormattedSection {
   title: string;
@@ -141,7 +141,7 @@ export class FormatterService {
         metadata: metadata.join(' • '),
         children: pr.enhancedData?.reviews
           ? pr.enhancedData.reviews.map((review: GitHubReview) => ({
-              content: `Review by ${review.user?.login ?? 'Unknown'}: ${review.state}`,
+              content: `Review by ${(review.user && 'login' in review.user ? (review.user as GitHubUser).login : null) ?? 'Unknown'}: ${review.state}`,
               metadata: review.submitted_at
                 ? new Date(review.submitted_at).toLocaleDateString()
                 : undefined,
@@ -255,7 +255,7 @@ export class FormatterService {
       }
 
       items.push({
-        content: `${isBug ? '🐛 ' : ''}${issue.title}`,
+        content: `${isBug ? '[BUG] ' : ''}${issue.title}`,
         reference,
         metadata: metadata.join(' • '),
       });
@@ -275,15 +275,13 @@ export class FormatterService {
     const output: string[] = [];
 
     // Header
-    output.push(
-      this.style(chalk.bold.blue, `📋 Activity Summary - ${timeframe}`)
-    );
+    output.push(this.style(chalk.bold.blue, `Activity Summary - ${timeframe}`));
     output.push(this.style(chalk.gray, '─'.repeat(60)));
     output.push('');
 
     // AI Summary sections with structured data references
     if (aiSections.completed) {
-      output.push(this.style(chalk.bold.green, '🚀 Completed Work'));
+      output.push(this.style(chalk.bold.green, 'Completed Work'));
       output.push('');
       output.push(this.formatAISection(aiSections.completed));
       output.push('');
@@ -291,7 +289,7 @@ export class FormatterService {
       // Add structured PR/Issue references
       const completedItems = this.getCompletedItems(sections);
       if (completedItems.length > 0) {
-        output.push(this.style(chalk.bold, '   📎 References:'));
+        output.push(this.style(chalk.bold, '   [Refs]'));
         completedItems.forEach((item) => {
           output.push(this.formatStructuredItem(item, '   '));
         });
@@ -300,14 +298,14 @@ export class FormatterService {
     }
 
     if (aiSections.technical) {
-      output.push(this.style(chalk.bold.cyan, '🔧 Technical Changes'));
+      output.push(this.style(chalk.bold.cyan, 'Technical Changes'));
       output.push('');
       output.push(this.formatAISection(aiSections.technical));
       output.push('');
     }
 
     if (aiSections.current) {
-      output.push(this.style(chalk.bold.yellow, '⚡ Current Work'));
+      output.push(this.style(chalk.bold.yellow, 'Current Work'));
       output.push('');
       output.push(this.formatAISection(aiSections.current));
       output.push('');
@@ -315,7 +313,7 @@ export class FormatterService {
       // Add structured Linear issue references
       const currentItems = this.getCurrentWorkItems(sections);
       if (currentItems.length > 0) {
-        output.push(this.style(chalk.bold, '   📎 References:'));
+        output.push(this.style(chalk.bold, '   [Refs]'));
         currentItems.forEach((item) => {
           output.push(this.formatStructuredItem(item, '   '));
         });
@@ -324,14 +322,14 @@ export class FormatterService {
     }
 
     if (aiSections.challenges) {
-      output.push(this.style(chalk.bold.red, '🚧 Challenges'));
+      output.push(this.style(chalk.bold.red, 'Challenges'));
       output.push('');
       output.push(this.formatAISection(aiSections.challenges));
       output.push('');
     }
 
     if (aiSections.planned) {
-      output.push(this.style(chalk.bold.magenta, '📅 Planned Work'));
+      output.push(this.style(chalk.bold.magenta, 'Planned Work'));
       output.push('');
       output.push(this.formatAISection(aiSections.planned));
       output.push('');
@@ -339,7 +337,7 @@ export class FormatterService {
       // Add structured Linear issue references
       const plannedItems = this.getPlannedWorkItems(sections);
       if (plannedItems.length > 0) {
-        output.push(this.style(chalk.bold, '   📎 References:'));
+        output.push(this.style(chalk.bold, '   [Refs]'));
         plannedItems.forEach((item) => {
           output.push(this.formatStructuredItem(item, '   '));
         });
@@ -349,7 +347,7 @@ export class FormatterService {
 
     // Detailed sections
     output.push(this.style(chalk.gray, '─'.repeat(60)));
-    output.push(this.style(chalk.bold, '📊 Detailed Activity'));
+    output.push(this.style(chalk.bold, 'Detailed Activity'));
     output.push('');
 
     sections.forEach((section) => {
@@ -448,15 +446,15 @@ export class FormatterService {
   private getReferenceBullet(type?: string): string {
     switch (type) {
       case 'github-pr':
-        return '🔄';
+        return '[PR]';
       case 'github-issue':
-        return '🐛';
+        return '[Issue]';
       case 'github-commit':
-        return '💻';
+        return '[Commit]';
       case 'linear-issue':
-        return '📋';
+        return '[Linear]';
       default:
-        return '•';
+        return '[Item]';
     }
   }
 

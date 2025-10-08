@@ -5,6 +5,7 @@ import { config } from '../../utils/config.js';
 import {
   GitHubIssue,
   GitHubPullRequest,
+  GitHubUser,
 } from '../../interfaces/github-types.js';
 import { EnhancedCommitData } from '../../interfaces/activity.js';
 import {
@@ -14,6 +15,7 @@ import {
   ActivityData,
 } from '../types.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { NarrativePerspective } from '@recap-ai/shared';
 
 export const getActivitySummaryTool: RecapAITool = {
   name: 'get_activity_summary',
@@ -51,11 +53,24 @@ export const getActivitySummaryTool: RecapAITool = {
         type: 'string',
         description: 'End date in YYYY-MM-DD format (overrides timeframe)',
       },
+      timeoutMs: {
+        type: 'number',
+        description:
+          'Maximum time in milliseconds to spend fetching and summarizing before returning partial results',
+        minimum: 1000,
+        default: 60000,
+      },
     },
   },
   handler: async (args: Record<string, unknown>) => {
     try {
       const typedArgs = args as ActivitySummaryArgs;
+      const perspectiveSetting = config.get('summary.perspective');
+      const perspectiveName = (
+        config.get('summary.name') as string | undefined
+      )?.trim();
+      const perspective: NarrativePerspective =
+        perspectiveSetting === 'third-person' ? 'third-person' : 'first-person';
 
       // Validate author parameters - both or neither must be provided
       const hasGithubAuthor = !!typedArgs.authorGithub;
@@ -73,6 +88,8 @@ export const getActivitySummaryTool: RecapAITool = {
       let since: Date | undefined;
       let until: Date | undefined;
       const timeframe = typedArgs.timeframe ?? '1w';
+      const timeoutMs =
+        typeof typedArgs.timeoutMs === 'number' ? typedArgs.timeoutMs : 60000;
 
       if (typedArgs.since && typedArgs.until) {
         since = new Date(typedArgs.since);
@@ -86,6 +103,7 @@ export const getActivitySummaryTool: RecapAITool = {
 
       // Collect all activity data with proper typing
       const activityData: ActivityData = {};
+      const startedAt = Date.now();
 
       // GitHub data (if repository specified or configured)
       if (typedArgs.repository ?? config.get('github.defaults.repository')) {
@@ -134,7 +152,9 @@ export const getActivitySummaryTool: RecapAITool = {
                   commit.commit.message ??
                   'No message',
                 author:
-                  commit.commit.author?.login ??
+                  (commit.commit.author && 'login' in commit.commit.author
+                    ? (commit.commit.author as GitHubUser).login
+                    : null) ??
                   commit.commit.commit?.author?.name ??
                   'Unknown',
                 date:
@@ -148,7 +168,10 @@ export const getActivitySummaryTool: RecapAITool = {
                   number: pr.number,
                   title: pr.title,
                   state: pr.state,
-                  author: pr.user?.login ?? 'Unknown',
+                  author:
+                    (pr.user && 'login' in pr.user
+                      ? (pr.user as GitHubUser).login
+                      : null) ?? 'Unknown',
                   createdAt: pr.created_at,
                   repository: `${owner}/${repoName}`,
                 })
@@ -157,7 +180,10 @@ export const getActivitySummaryTool: RecapAITool = {
                 number: issue.number,
                 title: issue.title,
                 state: issue.state,
-                author: issue.user?.login ?? 'Unknown',
+                author:
+                  (issue.user && 'login' in issue.user
+                    ? (issue.user as GitHubUser).login
+                    : null) ?? 'Unknown',
                 createdAt: issue.created_at,
                 repository: `${owner}/${repoName}`,
               })),
@@ -333,12 +359,24 @@ export const getActivitySummaryTool: RecapAITool = {
           // TODO: Adapt Linear data format to match OpenAI service expectations
         }
 
+        const now = Date.now();
+        if (now - startedAt > timeoutMs) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            'Operation aborted due to timeout'
+          );
+        }
+
         const summary = await openaiService.generateActivitySummary(
           openaiActivityData as Parameters<
             typeof openaiService.generateActivitySummary
           >[0],
           timeframe,
-          true // enhanced formatting
+          true, // enhanced formatting
+          'summary',
+          undefined,
+          perspective,
+          perspectiveName
         );
 
         return {
@@ -356,6 +394,9 @@ export const getActivitySummaryTool: RecapAITool = {
               repository: typedArgs.repository,
               authorGithub: typedArgs.authorGithub,
               authorLinear: typedArgs.authorLinear,
+              timeoutMs,
+              perspective,
+              perspectiveName,
             },
           },
           timestamp: new Date().toISOString(),

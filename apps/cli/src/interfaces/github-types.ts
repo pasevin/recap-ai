@@ -1,20 +1,17 @@
-// GitHub API types - replacing any usage with proper interfaces
+// GitHub API types - now sourced from shared package with CLI extensions
 import type { EnhancedCommitData } from './activity';
+import type {
+  GitHubUser,
+  GitHubLabel,
+  GitHubRepository,
+} from '@recap-ai/shared';
 
-export interface GitHubUser {
-  login: string;
-  id: number;
-  avatar_url: string;
-  html_url: string;
-  type: string;
-}
-
-export interface GitHubLabel {
-  id: number;
-  name: string;
-  color: string;
-  description?: string;
-}
+// Re-export for external consumers
+export type {
+  GitHubUser,
+  GitHubLabel,
+  GitHubRepository,
+} from '@recap-ai/shared';
 
 export interface GitHubPullRequest {
   id: number;
@@ -90,49 +87,6 @@ export interface GitHubIssue {
       created_at: string;
     }>;
   };
-}
-
-export interface GitHubRepository {
-  id: number;
-  name: string;
-  full_name: string;
-  owner: GitHubUser;
-  private: boolean;
-  html_url: string;
-  description?: string;
-  fork: boolean;
-  created_at: string;
-  updated_at: string;
-  pushed_at: string;
-  clone_url: string;
-  ssh_url: string;
-  homepage?: string;
-  size: number;
-  stargazers_count: number;
-  watchers_count: number;
-  language?: string;
-  has_issues: boolean;
-  has_projects: boolean;
-  has_wiki: boolean;
-  has_pages: boolean;
-  forks_count: number;
-  archived: boolean;
-  disabled: boolean;
-  open_issues_count: number;
-  license?: {
-    key: string;
-    name: string;
-    spdx_id?: string;
-    url?: string;
-  };
-  allow_forking: boolean;
-  is_template: boolean;
-  topics: string[];
-  visibility: 'public' | 'private';
-  forks: number;
-  open_issues: number;
-  watchers: number;
-  default_branch: string;
 }
 
 export interface GitHubCommit {

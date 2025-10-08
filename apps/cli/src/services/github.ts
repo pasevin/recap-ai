@@ -105,12 +105,7 @@ export class GitHubService {
   }
 
   private async fetchCommits(options: FetchOptions) {
-    console.log('Fetching commits with options:', {
-      since: options.since,
-      until: options.until,
-      branch: options.branch,
-      author: options.author,
-    });
+    // Debug logging removed to avoid polluting JSON output in CLI
 
     const { data } = await this.octokit.repos.listCommits({
       owner: this.owner,
@@ -138,13 +133,7 @@ export class GitHubService {
   }
 
   private async fetchPullRequests(options: FetchOptions) {
-    console.log('Fetching pull requests with options:', {
-      since: options.since,
-      until: options.until,
-      branch: options.branch,
-      author: options.author,
-      prState: options.prState,
-    });
+    // Debug logging removed to avoid polluting JSON output in CLI
 
     const prs = await this.octokit.paginate(this.octokit.pulls.list, {
       owner: this.owner,

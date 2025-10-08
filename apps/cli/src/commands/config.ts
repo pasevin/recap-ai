@@ -89,7 +89,12 @@ export default class Config extends Command {
       if (value === undefined) {
         this.log(chalk.yellow(`No value found for key: ${args.key}`));
       } else {
-        this.log(String(value ?? ''));
+        // Properly serialize objects to JSON, primitives as strings
+        if (typeof value === 'object' && value !== null) {
+          this.log(JSON.stringify(value));
+        } else {
+          this.log(String(value ?? ''));
+        }
       }
       return;
     }

@@ -54,7 +54,7 @@ export default class MCP extends Command {
     port?: number;
     verbose?: boolean;
   }): Promise<void> {
-    this.log(chalk.blue('🚀 Starting Recap AI MCP Server...'));
+    this.log(chalk.blue('== Starting Recap AI MCP Server...'));
 
     try {
       // Validate configuration before starting
@@ -159,7 +159,7 @@ export default class MCP extends Command {
   }
 
   private async checkStatus(): Promise<void> {
-    this.log(chalk.blue('📊 Checking MCP Server status...'));
+    this.log(chalk.blue('== Checking MCP Server status...'));
 
     try {
       // Check if dependencies are available
@@ -170,7 +170,7 @@ export default class MCP extends Command {
       const linearToken = config.get('linear.token') as string;
       const openaiToken = config.get('openai.token') as string;
 
-      this.log(chalk.bold('\n🔧 Configuration Status:'));
+      this.log(chalk.bold('\n== Configuration Status:'));
       this.log(
         `  GitHub Token: ${githubToken ? chalk.green('✅ Set') : chalk.red('❌ Missing')}`
       );

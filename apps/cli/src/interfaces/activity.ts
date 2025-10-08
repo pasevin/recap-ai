@@ -17,6 +17,8 @@ export interface UnifiedActivityData {
   issues: GitHubIssue[];
   codeReviews: GitHubReview[];
   statistics: Statistics;
+  statisticsRepo?: Statistics;
+  statisticsAuthor?: Statistics;
   summary?: ActivitySummary;
   userDetails?: GitHubUser | LinearUser;
   enhancedPullRequests?: EnhancedPullRequest[];
@@ -54,6 +56,7 @@ export interface UserActivityOptions {
 export interface Statistics {
   totalCommits: number;
   totalPRs: number;
+  mergedPRs?: number;
   totalIssues: number;
   totalReviews: number;
   avgFilesPerCommit: number;

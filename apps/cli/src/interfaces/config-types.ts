@@ -1,77 +1,17 @@
-// Configuration types - replacing any usage with proper interfaces
-
-export type ConfigValue =
-  | string
-  | number
-  | boolean
-  | ConfigObject
-  | ConfigArray;
-export type ConfigObject = { [key: string]: ConfigValue };
-export type ConfigArray = ConfigValue[];
-
-export interface GitHubConfig {
-  token?: string;
-  defaults?: {
-    repository?: string;
-    organization?: string;
-    branch?: string;
-  };
-  api?: {
-    baseUrl?: string;
-    timeout?: number;
-    retries?: number;
-  };
-}
-
-export interface LinearConfig {
-  token?: string;
-  defaults?: {
-    teamId?: string;
-    organization?: string;
-  };
-  api?: {
-    baseUrl?: string;
-    timeout?: number;
-    retries?: number;
-  };
-}
-
-export interface OpenAIConfig {
-  token?: string;
-  model?: string;
-  baseUrl?: string;
-  timeout?: number;
-  maxTokens?: number;
-  temperature?: number;
-}
-
-export interface MCPConfig {
-  enabled?: boolean;
-  port?: number;
-  host?: string;
-  auth?: {
-    enabled?: boolean;
-    token?: string;
-  };
-}
-
-export interface LoggingConfig {
-  level?: 'debug' | 'info' | 'warn' | 'error';
-  format?: 'json' | 'text';
-  file?: string;
-  maxSize?: string;
-  maxFiles?: number;
-}
-
-export interface Config {
-  github?: GitHubConfig;
-  linear?: LinearConfig;
-  openai?: OpenAIConfig;
-  mcp?: MCPConfig;
-  logging?: LoggingConfig;
-  version?: string;
-  lastUpdated?: string;
-}
+// Configuration types - now sourced from shared package
+export {
+  ConfigValue,
+  ConfigObject,
+  ConfigArray,
+  GitHubConfig,
+  LinearConfig,
+  OpenAIConfig,
+  MCPConfig,
+  LoggingConfig,
+  SummaryConfig,
+  NarrativePerspective,
+  Config,
+} from '@recap-ai/shared';
 
 // For type-safe configuration access
 export interface ConfigPaths {
@@ -104,6 +44,8 @@ export interface ConfigPaths {
   'logging.file': string;
   'logging.maxSize': string;
   'logging.maxFiles': number;
+  'summary.perspective': 'first-person' | 'third-person';
+  'summary.name': string;
   version: string;
   lastUpdated: string;
 }
@@ -143,6 +85,8 @@ export function isValidConfigKey(key: string): key is ConfigKey {
     'logging.file',
     'logging.maxSize',
     'logging.maxFiles',
+    'summary.perspective',
+    'summary.name',
     'version',
     'lastUpdated',
   ];

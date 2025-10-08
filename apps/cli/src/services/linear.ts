@@ -1,5 +1,6 @@
 import { LinearClient } from '@linear/sdk';
 import { ConfigManager } from '../utils/config';
+import { normalizeIdentifier } from '../utils/author';
 
 /**
  * Configuration options for the Linear service
@@ -44,6 +45,18 @@ export interface LinearIssue {
     startsAt: string;
     endsAt: string;
   };
+  url?: string;
+  assignee?: {
+    email?: string | null;
+  } | null;
+  creator?: {
+    email?: string | null;
+  } | null;
+  subscribers?: {
+    nodes: Array<{
+      email?: string | null;
+    }>;
+  } | null;
 }
 
 /**
@@ -132,7 +145,13 @@ export class LinearService {
       this.configManager.parseTimeframe(timeframe);
     const personIdentifier =
       this.validateLinearUser(options.assignee) ??
-      this.configManager.get('linear.defaults.person.identifier');
+      (this.configManager.get('linear.defaults.person.identifier') as
+        | string
+        | undefined);
+    const normalizedIdentifier = normalizeIdentifier(personIdentifier);
+
+    // Build GraphQL query conditionally based on whether we have a personIdentifier
+    const hasPersonFilter = Boolean(normalizedIdentifier);
 
     const query = `
       query($teamId: String!) {
@@ -142,12 +161,16 @@ export class LinearService {
               createdAt: {
                 gte: "${since.toISOString()}",
                 lte: "${until.toISOString()}"
-              }
+              }${
+                hasPersonFilter
+                  ? `,
               or: [
                 { creator: { email: { eq: "${personIdentifier}" } } },
                 { assignee: { email: { eq: "${personIdentifier}" } } },
                 { subscribers: { some: { email: { eq: "${personIdentifier}" } } } }
-              ]
+              ]`
+                  : ''
+              }
             },
             first: 50
           ) {
@@ -155,6 +178,7 @@ export class LinearService {
               id
               identifier
               title
+              url
               state {
                 name
                 type
@@ -163,6 +187,17 @@ export class LinearService {
               labels {
                 nodes {
                   name
+                }
+              }
+              assignee {
+                email
+              }
+              creator {
+                email
+              }
+              subscribers {
+                nodes {
+                  email
                 }
               }
               cycle {
@@ -176,8 +211,12 @@ export class LinearService {
         }
         activeIssues: team(id: $teamId) {
           issues(
-            filter: {
-              assignee: { email: { eq: "${personIdentifier}" } }
+            filter: {${
+              hasPersonFilter
+                ? `
+              assignee: { email: { eq: "${personIdentifier}" } },`
+                : ''
+            }
               and: [
                 { state: { type: { in: ["started", "unstarted"] } } },
                 { state: { name: { nin: ["Merged", "Canceled", "Done"] } } }
@@ -189,6 +228,7 @@ export class LinearService {
               id
               identifier
               title
+              url
               state {
                 name
                 type
@@ -197,6 +237,17 @@ export class LinearService {
               labels {
                 nodes {
                   name
+                }
+              }
+              assignee {
+                email
+              }
+              creator {
+                email
+              }
+              subscribers {
+                nodes {
+                  email
                 }
               }
               cycle {
@@ -235,9 +286,32 @@ export class LinearService {
       throw new Error('No data returned from Linear API');
     }
 
+    let issues = response.data.team.issues.nodes;
+    let activeIssues = response.data.activeIssues.issues.nodes;
+
+    if (!normalizedIdentifier) {
+      console.warn(
+        'Linear person identifier is not configured; filtering out Linear data to avoid inaccurate summaries.'
+      );
+      issues = [];
+      activeIssues = [];
+    } else {
+      const matchesIdentifier = (issue: LinearIssue) => {
+        const candidates = [
+          issue.assignee?.email,
+          issue.creator?.email,
+          ...(issue.subscribers?.nodes.map((s) => s.email) ?? []),
+        ].map(normalizeIdentifier);
+        return candidates.includes(normalizedIdentifier);
+      };
+
+      issues = issues.filter(matchesIdentifier);
+      activeIssues = activeIssues.filter(matchesIdentifier);
+    }
+
     return {
-      issues: response.data.team.issues.nodes,
-      activeIssues: response.data.activeIssues.issues.nodes,
+      issues,
+      activeIssues,
     };
   }
 }

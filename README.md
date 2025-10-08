@@ -120,8 +120,20 @@ recap summarize --format json
 
 > **Note**: Author filtering requires both `--author-github` and `--author-linear` flags to ensure cross-service compatibility. Linear requires email addresses, while GitHub accepts usernames or emails.
 
-- `--format, -f`: Output format (summary/json)
+- `--format, -f`: Output format (summary, markdown, json)
 - `--detailed, -d`: Use detailed formatting with structured sections and source references
+- `--full-context`: Expand items for advanced reports (larger prompts)
+- `--no-post`: Disable post-processing (no auto-filled stats or linkification)
+
+By default the CLI post-processes the LLM’s markdown to:
+
+- Fill the `Summary Statistics` table (PRs Merged, Commits, Issues Worked, Repositories)
+- Linkify GitHub PR markers `(PR: #123)`, lists `(PR: #130, #133, #134, #136, #149)`, and ranges `(PR: #168–#173)`
+- Linkify Linear issue IDs like `**ABC-123**` when URLs are known
+- Linkify narrative `Issue #123` mentions when they can be uniquely resolved
+- Leave ambiguous references unmodified
+
+Use `--no-post` to output the raw LLM result without these enhancements.
 
 ### GitHub Integration
 

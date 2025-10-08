@@ -13,6 +13,7 @@ export default [
         project: [
           './tsconfig.json',
           './apps/*/tsconfig.json',
+          './apps/cli/tsconfig.eslint.json',
           './packages/*/tsconfig.json',
         ],
         ecmaVersion: 2022,
@@ -66,6 +67,24 @@ export default [
       // Disable some noisy base ESLint rules that conflict with TypeScript
       'no-undef': 'off', // TypeScript handles this better
       'no-unused-vars': 'off', // Use TypeScript version instead
+    },
+  },
+  // More lenient rules for test files
+  {
+    files: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/__tests__/**/*.ts',
+      '**/__tests__/**/*.tsx',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   {

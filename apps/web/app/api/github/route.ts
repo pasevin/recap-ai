@@ -39,13 +39,33 @@ export async function POST(request: NextRequest) {
     if (validatedData.format === 'json') {
       try {
         const jsonResult = JSON.parse(result) as Record<string, unknown>;
-        return createSuccessResponse(jsonResult);
-      } catch {
-        // If parsing fails, return as string
-        return createSuccessResponse({ content: result });
+        return createSuccessResponse({
+          success: true,
+          data: jsonResult,
+          warnings: [],
+        });
+      } catch (parseError) {
+        // Log parsing error for debugging
+        apiLogger.error(
+          'Failed to parse GitHub CLI JSON response',
+          logContext,
+          parseError as Error
+        );
+        return createSuccessResponse({
+          success: false,
+          data: {
+            error: 'Failed to parse GitHub response as JSON',
+            rawContent: result,
+          },
+          warnings: ['Response could not be parsed as JSON'],
+        });
       }
     } else {
-      return createSuccessResponse({ content: result });
+      return createSuccessResponse({
+        success: true,
+        data: { content: result },
+        warnings: [],
+      });
     }
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -87,12 +107,33 @@ export async function GET(request: NextRequest) {
     if (validatedData.format === 'json') {
       try {
         const jsonResult = JSON.parse(result) as Record<string, unknown>;
-        return createSuccessResponse(jsonResult);
-      } catch {
-        return createSuccessResponse({ content: result });
+        return createSuccessResponse({
+          success: true,
+          data: jsonResult,
+          warnings: [],
+        });
+      } catch (parseError) {
+        // Log parsing error for debugging
+        apiLogger.error(
+          'Failed to parse GitHub CLI JSON response in GET request',
+          logContext,
+          parseError as Error
+        );
+        return createSuccessResponse({
+          success: false,
+          data: {
+            error: 'Failed to parse GitHub response as JSON',
+            rawContent: result,
+          },
+          warnings: ['Response could not be parsed as JSON'],
+        });
       }
     } else {
-      return createSuccessResponse({ content: result });
+      return createSuccessResponse({
+        success: true,
+        data: { content: result },
+        warnings: [],
+      });
     }
   } catch (error) {
     apiLogger.error('GitHub GET request failed', logContext, error as Error);

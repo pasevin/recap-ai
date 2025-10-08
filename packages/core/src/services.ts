@@ -2,7 +2,10 @@
 import type { ActivityData } from '@recap-ai/shared';
 
 export interface DataService {
-  fetchData(timeframe: string): Promise<ActivityData[]>;
+  getActivityData(options: {
+    timeframe: string;
+    // Add other options if needed
+  }): Promise<ActivityData[]>;
   getServiceName(): string;
 }
 

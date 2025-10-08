@@ -19,6 +19,11 @@ export const getConfigurationTool: RecapAITool = {
         description: 'Include default configuration values',
         default: true,
       },
+      includeTimeouts: {
+        type: 'boolean',
+        description: 'Include timeout-related environment configuration',
+        default: true,
+      },
     },
   },
   handler: async (args: Record<string, unknown>) => {
@@ -119,6 +124,22 @@ export const getConfigurationTool: RecapAITool = {
       if (safeConfig.linear.configured) integrations.push('Linear');
       if (safeConfig.openai.configured) integrations.push('OpenAI');
 
+      const includeTimeouts =
+        typeof (args as ConfigurationArgs & { includeTimeouts?: boolean })
+          .includeTimeouts === 'boolean'
+          ? (args as ConfigurationArgs & { includeTimeouts?: boolean })
+              .includeTimeouts
+          : true;
+
+      const timeouts = includeTimeouts
+        ? {
+            RECAP_TIMEOUT_BASE_MS: process.env.RECAP_TIMEOUT_BASE_MS,
+            RECAP_TIMEOUT_PER_SERVICE_MS:
+              process.env.RECAP_TIMEOUT_PER_SERVICE_MS,
+            RECAP_TIMEOUT_MAX_MS: process.env.RECAP_TIMEOUT_MAX_MS,
+          }
+        : undefined;
+
       return {
         success: true,
         data: {
@@ -131,6 +152,7 @@ export const getConfigurationTool: RecapAITool = {
                 ? `${integrations.join(', ')} configured`
                 : 'No integrations configured',
           },
+          timeouts,
           metadata: {
             retrieved_at: new Date().toISOString(),
             includeDefaults: typedArgs.includeDefaults !== false,

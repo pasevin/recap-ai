@@ -14,6 +14,7 @@ import {
   GitHubFile,
   GitHubCommit,
   GitHubReview,
+  GitHubUser,
 } from '../interfaces/github-types';
 
 export class EnhancedGitHubService {
@@ -45,25 +46,52 @@ export class EnhancedGitHubService {
     } = options;
 
     try {
-      // Step 1: Fetch core data in parallel
+      // Step 1: Fetch core data in parallel (caps scaled by timeframe)
+      const scaledPRCap = this.scaleCapByDays(
+        since,
+        until,
+        maxResults,
+        10,
+        2000
+      );
+      const scaledIssueCap = this.scaleCapByDays(
+        since,
+        until,
+        maxResults,
+        10,
+        2000
+      );
+      const scaledCommitCap = this.scaleCapByDays(
+        since,
+        until,
+        maxResults,
+        20,
+        5000
+      );
+
       const [commits, pullRequests, issues] = await Promise.all([
         this.fetchCommits(owner, repo, {
           since,
           until,
           branch,
           author,
-          maxResults,
+          maxResults: scaledCommitCap,
         }),
         includePRs
           ? this.fetchPullRequests(owner, repo, {
               since,
               until,
               author,
-              maxResults,
+              maxResults: scaledPRCap,
             })
           : [],
         includeIssues
-          ? this.fetchIssues(owner, repo, { since, until, author, maxResults })
+          ? this.fetchIssues(owner, repo, {
+              since,
+              until,
+              author,
+              maxResults: scaledIssueCap,
+            })
           : [],
       ]);
 
@@ -91,11 +119,35 @@ export class EnhancedGitHubService {
         repo
       );
 
-      // Step 5: Calculate statistics
-      const statistics = this.calculateStatistics(
+      // Step 5: Calculate statistics from FULL sets (do not truncate by enhancements)
+      const statisticsRepo = this.calculateStatistics(
         enhancedCommits,
-        enhancedPRs,
-        enhancedIssues
+        pullRequests,
+        issues
+      );
+
+      // Author-only stats using provided author filter (if present)
+      const authorLogin = author;
+      const authorCommits = enhancedCommits.filter((c) => {
+        const login =
+          (c.commit.author && 'login' in c.commit.author
+            ? (c.commit.author as GitHubUser).login
+            : null) ??
+          c.commit.commit?.author?.name ??
+          '';
+        return authorLogin ? login === authorLogin : true;
+      });
+      const authorPRs = pullRequests.filter((pr) =>
+        authorLogin ? pr.user?.login === authorLogin : true
+      );
+      const authorIssues = issues.filter((is) =>
+        authorLogin ? is.user?.login === authorLogin : true
+      );
+
+      const statisticsAuthor = this.calculateStatistics(
+        authorCommits,
+        authorPRs,
+        authorIssues
       );
 
       // Step 6: Generate summary
@@ -112,7 +164,9 @@ export class EnhancedGitHubService {
         codeReviews: enhancedCommits
           .filter((c) => c.reviews && c.reviews.length > 0)
           .flatMap((c) => c.reviews ?? []),
-        statistics,
+        statistics: statisticsRepo,
+        statisticsRepo,
+        statisticsAuthor,
         summary,
       };
     } catch (error) {
@@ -222,30 +276,43 @@ export class EnhancedGitHubService {
   ): Promise<GitHubPullRequest[]> {
     const { since, until, author, maxResults } = options;
 
+    // Paginate across pages until 'since' boundary or cap reached
     return this.rateLimiter.execute(async () => {
-      const params = {
-        owner,
-        repo,
-        state: 'all' as const,
-        per_page: Math.min(maxResults ?? 50, 100),
-        sort: 'updated' as const,
-        direction: 'desc' as const,
-      };
+      const perPage = Math.min(Math.max(maxResults ?? 300, 100), 100);
+      const results: GitHubPullRequest[] = [];
+      let page = 1;
+      while (true) {
+        const response = await this.octokit.pulls.list({
+          owner,
+          repo,
+          state: 'all',
+          per_page: perPage,
+          sort: 'created',
+          direction: 'desc',
+          page,
+        });
+        const pageItems = response.data as GitHubPullRequest[];
+        if (pageItems.length === 0) break;
 
-      const response = await this.octokit.pulls.list(params);
-      let prs = response.data;
-
-      // Filter by date and author if specified
-      if (since ?? until ?? author) {
-        prs = prs.filter((pr) => {
+        const filtered = pageItems.filter((pr) => {
           if (author && pr.user?.login !== author) return false;
           if (since && new Date(pr.created_at) < since) return false;
           if (until && new Date(pr.created_at) > until) return false;
           return true;
         });
-      }
 
-      return prs as GitHubPullRequest[];
+        results.push(...filtered);
+
+        const oldest = pageItems[pageItems.length - 1];
+        if (
+          (since && new Date(oldest.created_at) < since) ||
+          results.length >= (maxResults ?? 1000)
+        ) {
+          break;
+        }
+        page += 1;
+      }
+      return results;
     });
   }
 
@@ -260,26 +327,42 @@ export class EnhancedGitHubService {
     const { since, until, author, maxResults } = options;
 
     return this.rateLimiter.execute(async () => {
-      const params = {
-        owner,
-        repo,
-        state: 'all' as const,
-        per_page: Math.min(maxResults ?? 50, 100),
-        sort: 'updated' as const,
-        direction: 'desc' as const,
-        ...(author && { creator: author }),
-        ...(since && { since: since.toISOString() }),
-      };
+      const perPage = Math.min(Math.max(maxResults ?? 300, 100), 100);
+      const results: GitHubIssue[] = [];
+      let page = 1;
+      while (true) {
+        const response = await this.octokit.issues.listForRepo({
+          owner,
+          repo,
+          state: 'all',
+          per_page: perPage,
+          sort: 'created',
+          direction: 'desc',
+          page,
+          ...(author && { creator: author }),
+          ...(since && { since: since.toISOString() }),
+        });
+        let pageItems = response.data.filter((i) => !('pull_request' in i));
+        if (pageItems.length === 0) break;
 
-      const response = await this.octokit.issues.listForRepo(params);
-      let issues = response.data.filter((issue) => !issue.pull_request); // Exclude PRs
+        if (until) {
+          pageItems = pageItems.filter(
+            (issue) => new Date(issue.created_at) <= until
+          );
+        }
 
-      // Additional filtering for until date
-      if (until) {
-        issues = issues.filter((issue) => new Date(issue.created_at) <= until);
+        results.push(...(pageItems as GitHubIssue[]));
+
+        const oldest = pageItems[pageItems.length - 1];
+        if (
+          (since && new Date(oldest.created_at) < since) ||
+          results.length >= (maxResults ?? 1000)
+        ) {
+          break;
+        }
+        page += 1;
       }
-
-      return issues as GitHubIssue[];
+      return results;
     });
   }
 
@@ -509,16 +592,32 @@ export class EnhancedGitHubService {
     query: string,
     maxResults: number
   ): Promise<(GitHubPullRequest | GitHubIssue)[]> {
-    return this.rateLimiter.execute(async () => {
-      const response = await this.octokit.search.issuesAndPullRequests({
-        q: query,
-        per_page: Math.min(maxResults ?? 50, 100),
-        sort: 'updated',
-        order: 'desc',
-        advanced_search: true, // Use new advanced search API to avoid deprecation warnings
+    // Paginate up to GitHub Search API cap (~1000 results)
+    const results: (GitHubPullRequest | GitHubIssue)[] = [];
+    const perPage = Math.min(maxResults ?? 50, 100);
+    const maxPages = Math.min(10, Math.ceil((maxResults ?? 100) / perPage));
+
+    for (let page = 1; page <= maxPages; page++) {
+      // Respect rate limits per page request
+      const pageItems = await this.rateLimiter.execute(async () => {
+        const response = await this.octokit.search.issuesAndPullRequests({
+          q: query,
+          per_page: perPage,
+          page,
+          sort: 'updated',
+          order: 'desc',
+          advanced_search: 'true',
+        });
+        return response.data.items as (GitHubPullRequest | GitHubIssue)[];
       });
-      return response.data.items as (GitHubPullRequest | GitHubIssue)[];
-    });
+
+      results.push(...pageItems);
+      if (pageItems.length < perPage || results.length >= (maxResults ?? 100)) {
+        break;
+      }
+    }
+
+    return results.slice(0, maxResults ?? 100);
   }
 
   /**
@@ -631,6 +730,27 @@ export class EnhancedGitHubService {
   }
 
   /**
+   * Scale collection caps by timeframe length (days) with sensible floors/ceilings
+   */
+  private scaleCapByDays(
+    since: Date | undefined,
+    until: Date | undefined,
+    userCap: number | undefined,
+    perDay: number,
+    hardCap: number
+  ): number {
+    if (typeof userCap === 'number' && userCap > 0) return userCap;
+    if (!since || !until) return Math.min(hardCap, 1000);
+    const days = Math.max(
+      1,
+      Math.ceil((until.getTime() - since.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    const scaled = days * perDay;
+    const clamped = Math.max(300, Math.min(hardCap, scaled));
+    return clamped;
+  }
+
+  /**
    * Calculate comprehensive statistics
    */
   private calculateStatistics(
@@ -645,7 +765,9 @@ export class EnhancedGitHubService {
 
       // Extract author with proper priority: GitHub login > Git author name > Git author email > committer name
       const author =
-        enhancedCommit.commit.author?.login ??
+        (enhancedCommit.commit.author && 'login' in enhancedCommit.commit.author
+          ? (enhancedCommit.commit.author as GitHubUser).login
+          : null) ??
         enhancedCommit.commit.commit?.author?.name ??
         enhancedCommit.commit.commit?.author?.email ??
         enhancedCommit.commit.commit?.committer?.name ??
@@ -683,9 +805,15 @@ export class EnhancedGitHubService {
       }
     });
 
+    const mergedPRs = pullRequests.filter((pr) => {
+      const p = pr as { merged_at?: string | null; state?: string };
+      return Boolean(p.merged_at) || p.state === 'merged';
+    }).length;
+
     return {
       totalCommits: commits.length,
       totalPRs: pullRequests.length,
+      mergedPRs,
       totalIssues: issues.length,
       totalReviews: commits.filter((c) => {
         const reviews = (c as { reviews?: unknown[] }).reviews;

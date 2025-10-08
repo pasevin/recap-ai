@@ -217,6 +217,8 @@ temp/
 # App specific
 .recap-ai.config.json
 /.cursor
+.cursorignore
 
-# Agent OS documentation (local development environment)
-.agent-os/
+/.agent-os
+*.log
+/.recap-ai.config.back.json

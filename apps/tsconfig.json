@@ -1,0 +1,20 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./web/*"],
+      "@recap-ai/cli/*": ["./cli/src/*"],
+      "@recap-ai/core/*": ["../packages/core/src/*"],
+      "@recap-ai/shared/*": ["../packages/shared/src/*"]
+    }
+  },
+  "references": [
+    { "path": "./cli" },
+    { "path": "./web" },
+    { "path": "../packages/core" },
+    { "path": "../packages/shared" }
+  ],
+  "include": [],
+  "exclude": ["node_modules", "dist", ".next"]
+}

@@ -54,6 +54,10 @@ interface Config extends Record<string, unknown> {
     level?: 'debug' | 'info' | 'warn' | 'error';
     format?: 'json' | 'text';
   };
+  summary?: {
+    perspective?: 'first-person' | 'third-person';
+    name?: string;
+  };
 }
 
 export class ConfigManager {

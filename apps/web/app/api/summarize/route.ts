@@ -18,12 +18,26 @@ export async function POST(request: NextRequest) {
 
     apiLogger.debug('Request validated', logContext, validatedData);
 
-    // Execute CLI command
-    const result = await cliExecutor.summarize(
-      validatedData.timeframe as '1d' | '1w' | '1m' | '1y',
+    // Execute CLI command. Always request JSON to include structured fields like formattedData
+    const rawResult = await cliExecutor.summarize(
+      validatedData.timeframe ?? '1w',
       validatedData.sources,
-      validatedData.format as 'summary' | 'json'
+      'json',
+      validatedData.perspective,
+      validatedData.perspectiveName,
+      {
+        fullContext: validatedData.fullContext === true,
+        templateId: (validatedData as { templateId?: string }).templateId,
+      }
     );
+
+    // Normalize response so UI always has content available
+    const result = {
+      ...rawResult,
+      content:
+        (rawResult as unknown as { content?: string }).content ??
+        ((rawResult as unknown as { summary?: string }).summary || ''),
+    };
 
     const duration = Date.now() - startTime;
     apiLogger.info(
@@ -34,17 +48,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Return appropriate response based on format
-    if (validatedData.format === 'json') {
-      try {
-        const jsonResult = JSON.parse(result) as Record<string, unknown>;
-        return createSuccessResponse(jsonResult);
-      } catch {
-        // If parsing fails, return as string
-        return createSuccessResponse({ content: result });
-      }
-    } else {
-      return createSuccessResponse({ content: result });
-    }
+    return createSuccessResponse(result);
   } catch (error) {
     const duration = Date.now() - startTime;
     apiLogger.error(
@@ -73,25 +77,29 @@ export async function GET(request: NextRequest) {
 
     const validatedData = validateRequest(summarizeRequestSchema, queryData);
 
-    // Execute CLI command
-    const result = await cliExecutor.summarize(
-      validatedData.timeframe as '1d' | '1w' | '1m' | '1y',
+    // Execute CLI command. Always request JSON to include structured fields like formattedData
+    const rawResult = await cliExecutor.summarize(
+      validatedData.timeframe ?? '1w',
       validatedData.sources,
-      validatedData.format as 'summary' | 'json'
+      'json',
+      validatedData.perspective,
+      validatedData.perspectiveName,
+      {
+        fullContext: validatedData.fullContext === true,
+        templateId: (validatedData as { templateId?: string }).templateId,
+      }
     );
+
+    const result = {
+      ...rawResult,
+      content:
+        (rawResult as unknown as { content?: string }).content ??
+        ((rawResult as unknown as { summary?: string }).summary || ''),
+    };
 
     apiLogger.info('Summarize GET request completed', logContext);
 
-    if (validatedData.format === 'json') {
-      try {
-        const jsonResult = JSON.parse(result) as Record<string, unknown>;
-        return createSuccessResponse(jsonResult);
-      } catch {
-        return createSuccessResponse({ content: result });
-      }
-    } else {
-      return createSuccessResponse({ content: result });
-    }
+    return createSuccessResponse(result);
   } catch (error) {
     apiLogger.error('Summarize GET request failed', logContext, error as Error);
     return handleAPIError(error);

@@ -37,13 +37,25 @@ export async function POST(request: NextRequest) {
     if (validatedData.format === 'json') {
       try {
         const jsonResult = JSON.parse(result) as Record<string, unknown>;
-        return createSuccessResponse(jsonResult);
+        return createSuccessResponse({
+          success: true,
+          data: jsonResult,
+          warnings: [],
+        });
       } catch {
         // If parsing fails, return as string
-        return createSuccessResponse({ content: result });
+        return createSuccessResponse({
+          success: true,
+          data: { content: result },
+          warnings: [],
+        });
       }
     } else {
-      return createSuccessResponse({ content: result });
+      return createSuccessResponse({
+        success: true,
+        data: { content: result },
+        warnings: [],
+      });
     }
   } catch (error) {
     const duration = Date.now() - startTime;

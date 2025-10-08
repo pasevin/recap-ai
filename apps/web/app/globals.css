@@ -1,59 +1,991 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-:root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 3.9%;
-  --primary: 0 0% 9%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96.1%;
-  --secondary-foreground: 0 0% 9%;
-  --muted: 0 0% 96.1%;
-  --muted-foreground: 0 0% 45.1%;
-  --accent: 0 0% 96.1%;
-  --accent-foreground: 0 0% 9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 89.8%;
-  --input: 0 0% 89.8%;
-  --ring: 0 0% 3.9%;
-  --radius: 0.5rem;
+@theme {
+  /* High contrast terminal color palette - Glowing amber CRT monitor */
+  --color-terminal-bg: oklch(5% 0.01 45);
+  --color-terminal-fg: oklch(74% 0.18 56);
+  --color-terminal-dim: oklch(65% 0.1 45);
+  --color-terminal-bright: oklch(95% 0.2 45);
+  --color-terminal-accent: oklch(82% 0.25 50);
+
+  /* System colors - High contrast, terminal-like with glowing amber accent */
+  --color-background: oklch(5% 0.01 45);
+  --color-foreground: oklch(74% 0.18 56);
+  --color-card: oklch(8% 0.02 45);
+  --color-card-foreground: oklch(74% 0.18 56);
+  --color-popover: oklch(8% 0.02 45);
+  --color-popover-foreground: oklch(74% 0.18 56);
+  --color-primary: oklch(82% 0.25 50);
+  --color-primary-foreground: oklch(5% 0.01 45);
+  --color-secondary: oklch(12% 0.03 45);
+  --color-secondary-foreground: oklch(74% 0.18 56);
+  --color-muted: oklch(15% 0.04 45);
+  --color-muted-foreground: oklch(65% 0.1 45);
+  --color-accent: oklch(82% 0.25 50);
+  --color-accent-foreground: oklch(5% 0.01 45);
+  /* Retro CRT red (more saturated and slightly brighter) */
+  --color-destructive: oklch(68% 0.28 27);
+  --color-destructive-foreground: oklch(18% 0.05 27);
+  --color-success: oklch(70% 0.18 140);
+  --color-success-foreground: oklch(20% 0.05 140);
+  --color-border: oklch(47% 0.12 62.58);
+  --color-input: oklch(8% 0.02 45);
+  --color-ring: oklch(82% 0.25 50);
+
+  /* Typography - Terminal fonts only */
+  --font-family-sans:
+    'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  --font-family-serif:
+    'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  --font-family-mono:
+    'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+
+  /* Sharp, terminal-like geometry */
+  --radius: 0px;
+
+  /* Breakpoints */
+  --breakpoint-3xl: 120rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+/* Subtle terminal effects - inspired by cool-retro-term */
+@keyframes terminal-cursor {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
   }
 }
 
-* {
-  border-color: hsl(var(--border));
+@keyframes subtle-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 2px currentColor;
+  }
+  50% {
+    text-shadow: 0 0 4px currentColor;
+  }
 }
 
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+@keyframes amber-glow {
+  0%,
+  100% {
+    text-shadow:
+      0 0 1px var(--color-accent),
+      0 0 3px var(--color-accent),
+      0 0 5px var(--color-accent);
+  }
+  50% {
+    text-shadow:
+      0 0 3px var(--color-accent),
+      0 0 6px var(--color-accent),
+      0 0 9px var(--color-accent);
+  }
+}
+
+@keyframes amber-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Neon-style irregular blink for helper descriptions */
+@keyframes neon-blink-random {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  12% {
+    opacity: 1;
+  }
+  14% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  22% {
+    opacity: 0.7;
+  }
+  26% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.9;
+  }
+  56% {
+    opacity: 0.2;
+  }
+  58% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 0.85;
+  }
+  83% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-neon-blink {
+  animation: neon-blink-random 1.2s steps(20, end) 1 both;
+}
+
+/* GPU-accelerated scanline animation */
+@keyframes scanlines-move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 2px;
+  }
+}
+
+/* Atomic loading scan bar */
+@keyframes atomic-scan {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* Subtle pixelated fade animation */
+@keyframes pixel-fade {
+  0% {
+    opacity: 0.14;
+  }
+  50% {
+    opacity: 0.28;
+  }
+  100% {
+    opacity: 0.14;
+  }
+}
+
+/* Terminal-style utility classes with higher contrast */
+.terminal-border {
+  border: 2px solid var(--color-border);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.terminal-border-dashed {
+  border: 2px dashed var(--color-border);
+  border-radius: 0;
+  box-shadow:
+    0 0 2px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.terminal-border-dotted {
+  border: 2px dotted var(--color-border);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.terminal-inset {
+  border: 2px inset var(--color-border);
+  background: var(--color-card);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.terminal-outset {
+  border: 2px outset var(--color-border);
+  background: var(--color-secondary);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.terminal-button {
+  border: 2px outset var(--color-border);
+  background: var(--color-secondary);
+  border-radius: 0;
+  font-family: var(--font-family-mono);
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: none;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.terminal-button:hover {
+  border: 2px inset var(--color-border);
+  background: var(--color-muted);
+  box-shadow:
+    0 0 2px var(--color-accent),
+    inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.terminal-button:active {
+  border: 2px inset var(--color-border);
+  background: var(--color-muted);
+  box-shadow:
+    0 0 2px var(--color-accent),
+    inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.terminal-input {
+  border: 2px inset var(--color-border);
+  background: var(--color-background);
+  border-radius: 0;
+  font-family: var(--font-family-mono);
+  padding: 0.25rem 0.5rem;
+  color: var(--color-foreground);
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.terminal-input:focus {
+  outline: none;
+  border: 2px inset var(--color-ring);
+  background: var(--color-card);
+  box-shadow:
+    0 0 3px var(--color-accent),
+    inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.terminal-panel {
+  border: 2px dashed var(--color-border);
+  background: var(--color-card);
+  border-radius: 0;
+  padding: 1rem;
+  box-shadow:
+    0 0 2px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.terminal-window {
+  border: 2px solid var(--color-border);
+  border-top: 2px solid var(--color-accent);
+  background: var(--color-background);
+  border-radius: 0;
+  box-shadow:
+    0 0 2px var(--color-accent),
+    0 0 4px var(--color-accent);
+}
+
+.terminal-text {
+  font-family: var(--font-family-mono);
+  color: var(--color-foreground);
+}
+
+.terminal-highlight {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+.terminal-glow {
+  text-shadow: 0 0 2px currentColor;
+}
+
+.amber-glow {
+  color: var(--color-accent);
+  text-shadow:
+    0 0 2px var(--color-accent),
+    0 0 1px var(--color-accent),
+    0 0 10px var(--color-accent);
+}
+
+.amber-glow-dim {
+  color: var(--color-muted-foreground);
+  text-shadow: 0 0 1px var(--color-muted-foreground);
+}
+
+.amber-glow-intense {
+  color: var(--color-accent);
+  text-shadow:
+    0 0 3px var(--color-accent),
+    0 0 6px var(--color-accent),
+    0 0 9px var(--color-accent),
+    0 0 12px var(--color-accent);
+}
+
+.destructive-glow {
+  color: var(--color-destructive);
+  text-shadow:
+    0 0 2px var(--color-destructive),
+    0 0 1px var(--color-destructive),
+    0 0 10px var(--color-destructive);
+}
+
+.success-glow {
+  color: var(--color-success);
+  text-shadow:
+    0 0 2px var(--color-success),
+    0 0 1px var(--color-success),
+    0 0 10px var(--color-success);
+}
+
+.animate-amber-glow {
+  animation: amber-glow 2s ease-in-out infinite;
+}
+
+.animate-amber-pulse {
+  animation: amber-pulse 1.5s ease-in-out infinite;
+}
+
+/* Interactive ignite effects for hover states */
+.terminal-ignite {
+  transition: all 200ms ease-in-out;
+}
+
+.terminal-ignite:hover {
+  background: var(--color-accent) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-accent) 0%,
+    color-mix(in oklch, var(--color-accent) 85%, black) 100%
+  ) !important;
+  box-shadow:
+    0 0 2px var(--color-accent),
+    0 0 4px var(--color-accent),
+    inset 0 0 2px rgba(255, 255, 255, 0.1) !important;
+}
+
+.terminal-ignite-border {
+  transition: all 200ms ease-in-out;
+}
+
+.terminal-ignite-border:hover {
+  border-color: var(--color-accent) !important;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    0 0 3px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+.terminal-ignite-subtle {
+  transition: all 200ms ease-in-out;
+}
+
+.terminal-ignite-subtle:hover {
+  background: var(--color-accent) !important;
+  background: color-mix(
+    in oklch,
+    var(--color-accent) 15%,
+    var(--color-card)
+  ) !important;
+  border-color: var(--color-accent) !important;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    0 0 2px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Terminal switch styles moved inline to component for better control */
+
+.subtle-scanlines {
+  position: relative;
+}
+
+.subtle-scanlines::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    color-mix(in oklch, var(--color-accent) 20%, black) 1px,
+    color-mix(in oklch, var(--color-accent) 20%, black) 3px
+  );
+  pointer-events: none;
+  will-change: background-position;
+  animation: scanlines-move 1.2s linear infinite;
+}
+
+/* Variants for demo controls */
+.subtle-scanlines.fast::before {
+  animation-duration: 0.6s;
+}
+
+.subtle-scanlines.slow::before {
+  animation-duration: 2.4s;
+}
+
+.subtle-scanlines.strong::before {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    color-mix(in oklch, var(--color-accent) 30%, black) 2px,
+    color-mix(in oklch, var(--color-accent) 30%, black) 4px
+  );
+}
+
+.subtle-scanlines.off::before {
+  display: none;
+}
+
+/* Weathered texture overlays */
+/* Weathered texture disabled - remove empty rule to fix lint warning */
+
+/* CRT Terminal glitch effects */
+@keyframes crt-glitch {
+  0%,
+  90%,
+  100% {
+    text-shadow:
+      0 0 2px var(--color-accent),
+      0 0 1px var(--color-accent),
+      0 0 10px var(--color-accent);
+    transform: translate(0);
+    filter: none;
+  }
+  91% {
+    text-shadow:
+      2px 0 var(--color-accent),
+      -2px 0 var(--color-destructive),
+      0 0 1px var(--color-accent),
+      0 0 10px var(--color-accent);
+    transform: translate(-1px, 0);
+  }
+  92% {
+    text-shadow:
+      -1px 0 var(--color-accent),
+      1px 0 var(--color-destructive),
+      0 0 1px var(--color-accent),
+      0 0 10px var(--color-accent);
+    transform: translate(1px, 0);
+  }
+  93% {
+    text-shadow:
+      0 0 2px var(--color-accent),
+      0 0 1px var(--color-accent),
+      0 0 10px var(--color-accent);
+    transform: translate(0);
+    filter: contrast(1.2) brightness(1.1);
+  }
+}
+
+@keyframes crt-flicker {
+  0%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.95;
+  }
+  98% {
+    opacity: 0.98;
+  }
+  99% {
+    opacity: 0.92;
+  }
+}
+
+.crt-terminal-logo {
+  animation:
+    crt-glitch 8s infinite,
+    crt-flicker 3s infinite;
+}
+
+/* Atomic-themed loading overlay */
+.atomic-loading {
+  position: relative;
+  overflow: hidden; /* clip scan bar within container */
+}
+
+.atomic-loading::after {
+  content: '';
+  position: absolute;
+  top: 2px; /* avoid overlapping borders */
+  bottom: 2px;
+  left: 2px;
+  height: auto;
+  width: 22%; /* slimmer scan bar */
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--color-accent) 8%, transparent) 0%,
+    color-mix(in oklch, var(--color-accent) 14%, transparent) 50%,
+    color-mix(in oklch, var(--color-accent) 8%, transparent) 100%
+  );
+  animation: atomic-scan 2.2s linear infinite;
+  pointer-events: none;
+  filter: blur(0.4px);
+  opacity: 0.35; /* more subtle */
+}
+
+/* Pixelated loading overlay (subtle) */
+.pixel-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.pixel-loading::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  pointer-events: none;
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--color-accent) 55%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 2px 2px;
+  animation: pixel-fade 1.4s ease-in-out infinite;
+  z-index: 1;
+}
+
+/* Pixelated surface utility for highlighted backgrounds */
+.pixel-surface {
+  position: relative;
+  overflow: hidden;
+}
+
+.pixel-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--color-accent) 22%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 3px 3px;
+  animation: pixel-fade 2s ease-in-out infinite;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-loading::after {
+    animation: none;
+    opacity: 0.16;
+  }
+}
+
+/* Retro theme is always active - no dark/light mode toggle */
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    /* Remove all modern effects by default */
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  /* Increase spacing between labels and following controls in forms */
+  .terminal-form label + * {
+    margin-top: 0.5rem; /* 8px extra spacing below labels */
+  }
+
+  /* Exception: Don't add margin to labels inside grid containers */
+  .terminal-form .grid > label,
+  .terminal-form [class*='grid-cols'] > label {
+    margin-top: 0 !important;
+  }
+
+  /* Allow terminal classes to override the no-shadow rule for glowing effects */
+  .terminal-border,
+  .terminal-border-dashed,
+  .terminal-border-dotted,
+  .terminal-inset,
+  .terminal-outset,
+  .terminal-button,
+  .terminal-button:hover,
+  .terminal-button:active,
+  .terminal-input,
+  .terminal-input:focus,
+  .terminal-panel,
+  .terminal-window {
+    box-shadow: revert;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-family-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.025em;
+    /* Subtle terminal glow effect */
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.005) 1px,
+      rgba(255, 255, 255, 0.005) 2px
+    );
+  }
+
+  /* All form elements get terminal styling */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: var(--font-family-mono);
+    border-radius: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Headers get terminal styling */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-family-mono);
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Accordion animations (Radix-compatible) */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Remove quotes from blockquotes in prose content */
+.prose blockquote {
+  quotes: none !important;
+}
+
+/* App shell and performance utilities */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Consistent page container width */
+.site-container {
+  max-width: 56rem; /* matches Tailwind max-w-4xl */
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+.contain-content {
+  contain: content;
+}
+
+.cv-auto {
+  content-visibility: auto;
+}
+
+.cis-800 {
+  contain-intrinsic-size: 800px;
+}
+
+.prose blockquote:before,
+.prose blockquote:after {
+  content: none !important;
+}
+
+/* Smart card borders - add bottom border to header only when followed by content */
+[data-card-header]:has(+ [data-card-content]:not(.h-0)),
+[data-card-header]:has(+ [data-card-footer]:not(.h-0)) {
+  border-bottom: 2px dotted hsl(var(--border));
+}
+
+/* If a card has no header, remove the top border from the first content/footer */
+[data-card-content]:first-child,
+[data-card-footer]:first-child {
+  border-top: 0 !important;
+}
+
+/* Left sidebar icon utility classes */
+.terminal-icon-sidebar {
+  @apply w-16 bg-accent/10 border-r-2 border-dashed border-border flex items-center justify-center flex-shrink-0;
+}
+
+.terminal-icon-sidebar-lg {
+  @apply w-20 bg-accent/10 border-r-2 border-dashed border-border flex items-center justify-center flex-shrink-0;
+}
+
+/* Prominent bordered icon boxes for card headers */
+.terminal-icon-box-xl {
+  @apply h-12 w-12 p-2.5 border-2 border-dashed border-border bg-accent/10 rounded-none flex items-center justify-center flex-shrink-0;
+}
+
+.terminal-icon-box-xl [data-lucide] {
+  @apply h-6 w-6;
+}
+
+/* Icon sizing for sidebar */
+.terminal-icon-sidebar [data-lucide] {
+  @apply h-6 w-6;
+}
+
+.terminal-icon-sidebar-lg [data-lucide] {
+  @apply h-8 w-8;
+}
+
+/* Variant colors for sidebar icons */
+.terminal-icon-sidebar.destructive {
+  @apply bg-destructive/10 border-destructive;
+}
+
+.terminal-icon-sidebar-lg.destructive {
+  @apply bg-destructive/10 border-destructive;
+}
+
+.terminal-icon-sidebar.success {
+  @apply bg-success/10 border-success;
+}
+
+.terminal-icon-sidebar-lg.success {
+  @apply bg-success/10 border-success;
+}
+
+/* Alert-specific border variants with full terminal border styling */
+.alert-border-default {
+  border: 2px solid color-mix(in oklch, var(--color-accent) 40%, transparent);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.alert-border-destructive {
+  border: 2px solid var(--color-destructive);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-destructive),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.alert-border-warning {
+  border: 2px solid var(--color-accent);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-accent),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.alert-border-success {
+  border: 2px solid var(--color-success);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-success),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.alert-border-success-dashed {
+  border: 2px dashed var(--color-success);
+  border-radius: 0;
+  box-shadow:
+    0 0 1px var(--color-success),
+    inset 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* CRT Scan animation for avatar effect */
+@keyframes crt-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(400%);
+  }
+}
+
+/* Terminal scan animation for progress bar */
+@keyframes terminal-scan {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* Flowing energy effect for progress bar */
+@keyframes terminal-flow {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Pixel marching effect */
+@keyframes pixel-march {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(4px);
+  }
+}
+
+/* Terminal glitch effect */
+@keyframes terminal-glitch {
+  0%,
+  90%,
+  100% {
+    transform: translateX(0) scaleX(1);
+    opacity: 0.3;
+  }
+  5%,
+  15% {
+    transform: translateX(2px) scaleX(1.1);
+    opacity: 0.8;
+  }
+  10% {
+    transform: translateX(-1px) scaleX(0.9);
+    opacity: 0.6;
+  }
+}
+
+/* Down-arrow reveal animation and CRT glow variants */
+@keyframes arrow-reveal-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+    filter: blur(1px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.02);
+    filter: blur(0.2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+}
+
+.crt-arrow-glow {
+  color: var(--color-accent);
+  text-shadow:
+    0 0 2px var(--color-accent),
+    0 0 6px color-mix(in oklch, var(--color-accent) 60%, black),
+    0 0 12px color-mix(in oklch, var(--color-accent) 40%, black);
+  /* Glow for SVG icons */
+  filter:
+    drop-shadow(0 0 2px var(--color-accent))
+    drop-shadow(0 0 8px color-mix(in oklch, var(--color-accent) 55%, black))
+    drop-shadow(0 0 14px color-mix(in oklch, var(--color-accent) 35%, black));
+  will-change: filter, transform;
+}
+
+.crt-arrow-container {
+  position: relative;
+}
+
+.crt-arrow-container::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -10px;
+  width: 64%;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--color-accent) 35%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.animate-arrow-reveal-down {
+  /* Reveal once, then continue with subtle bobbing and glow pulsing */
+  animation:
+    arrow-reveal-down 520ms cubic-bezier(0.2, 0.7, 0.2, 1.0) 1 both,
+    arrow-bob 1.8s ease-in-out 0.52s infinite,
+    arrow-glow-pulse 2.4s cubic-bezier(0.45, 0, 0.55, 1.0) 0.52s infinite;
+}
+
+@keyframes arrow-bob {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes arrow-glow-pulse {
+  0% {
+    filter:
+      drop-shadow(0 0 2px var(--color-accent))
+      drop-shadow(0 0 8px color-mix(in oklch, var(--color-accent) 55%, black))
+      drop-shadow(0 0 14px color-mix(in oklch, var(--color-accent) 35%, black));
+  }
+  25% {
+    filter:
+      drop-shadow(0 0 2.5px var(--color-accent))
+      drop-shadow(0 0 11px color-mix(in oklch, var(--color-accent) 62%, black))
+      drop-shadow(0 0 18px color-mix(in oklch, var(--color-accent) 42%, black));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 3px var(--color-accent))
+      drop-shadow(0 0 14px color-mix(in oklch, var(--color-accent) 70%, black))
+      drop-shadow(0 0 24px color-mix(in oklch, var(--color-accent) 48%, black));
+  }
+  75% {
+    filter:
+      drop-shadow(0 0 2.5px var(--color-accent))
+      drop-shadow(0 0 11px color-mix(in oklch, var(--color-accent) 62%, black))
+      drop-shadow(0 0 18px color-mix(in oklch, var(--color-accent) 42%, black));
+  }
+  100% {
+    filter:
+      drop-shadow(0 0 2px var(--color-accent))
+      drop-shadow(0 0 8px color-mix(in oklch, var(--color-accent) 55%, black))
+      drop-shadow(0 0 14px color-mix(in oklch, var(--color-accent) 35%, black));
+  }
 }

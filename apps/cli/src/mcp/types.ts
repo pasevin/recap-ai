@@ -41,6 +41,7 @@ export interface ActivitySummaryArgs {
   authorLinear?: string;
   since?: string;
   until?: string;
+  timeoutMs?: number;
 }
 
 export interface ActivityDataArgs {
@@ -51,6 +52,7 @@ export interface ActivityDataArgs {
   since?: string;
   until?: string;
   format?: 'enhanced' | 'basic';
+  timeoutMs?: number;
 }
 
 export interface ConfigurationArgs {
@@ -135,5 +137,7 @@ export interface ActivityResult {
     repository?: string;
     authorGithub?: string;
     authorLinear?: string;
+    perspective?: 'first-person' | 'third-person';
+    perspectiveName?: string;
   };
 }

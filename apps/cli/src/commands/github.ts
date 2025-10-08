@@ -72,7 +72,12 @@ export default class Github extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Github);
-    const spinner = ora('Fetching data from GitHub...').start();
+
+    // Only show spinner for non-JSON output to avoid polluting the response
+    const spinner =
+      flags.format === 'json'
+        ? ora().stop()
+        : ora('Fetching data from GitHub...').start();
 
     try {
       // Get GitHub token and defaults from config
@@ -111,8 +116,14 @@ export default class Github extends Command {
       if (!flags.repo && flags.author) {
         // User activity mode - search across all repositories
         const githubService = createGitHubService();
-        spinner.text = `Fetching activity for user ${flags.author}...`;
-        this.log('\nUsing Enhanced GitHub Service for user activity search');
+
+        // Update spinner text unless outputting JSON (to avoid polluting output)
+        if (flags.format !== 'json') {
+          spinner.text = `Fetching activity for user ${flags.author}...`;
+          this.log('\nUsing Enhanced GitHub Service for user activity search');
+        } else {
+          spinner.stop(); // Stop spinner to avoid output pollution in JSON mode
+        }
 
         // Type guard to ensure we have enhanced service
         if ('fetchEnhancedUserActivity' in githubService) {
@@ -124,7 +135,10 @@ export default class Github extends Command {
               maxResults: 100,
             }
           );
-          spinner.stop();
+          // Only stop spinner if it's running (format is not JSON)
+          if (flags.format !== 'json') {
+            spinner.stop();
+          }
 
           if (flags.format === 'json') {
             this.log(JSON.stringify(activity, null, 2));
@@ -174,7 +188,11 @@ export default class Github extends Command {
       }
 
       const githubService = createGitHubService();
-      this.log('Using Enhanced GitHub Service');
+
+      // Only log service info when not outputting JSON to avoid polluting the output
+      if (flags.format !== 'json') {
+        this.log('Using Enhanced GitHub Service');
+      }
 
       // Type guard to ensure we have enhanced service
       if (!('fetchEnhancedRepositoryData' in githubService)) {
@@ -231,13 +249,19 @@ export default class Github extends Command {
       // Output data
       if (flags.output) {
         fs.writeFileSync(flags.output, output);
-        spinner.succeed(chalk.green(`Data saved to ${flags.output}`));
+        if (flags.format !== 'json') {
+          spinner.succeed(chalk.green(`Data saved to ${flags.output}`));
+        }
       } else {
-        spinner.stop();
+        if (flags.format !== 'json') {
+          spinner.stop();
+        }
         this.log(output);
       }
     } catch (error) {
-      spinner.fail(chalk.red('Failed to fetch data from GitHub'));
+      if (flags.format !== 'json') {
+        spinner.fail(chalk.red('Failed to fetch data from GitHub'));
+      }
       if (error instanceof Error) {
         this.error(error.message);
       } else {
@@ -252,9 +276,10 @@ export default class Github extends Command {
       pullRequests,
       issues,
       commits,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       userDetails,
       enhancedCommitData,
-    } = data;
+    } = data as GitHubEnhancedActivityData;
     const summary = (data as unknown as Record<string, unknown>).summary as
       | {
           pullRequests?: { open?: number; merged?: number; closed?: number };
@@ -265,8 +290,8 @@ export default class Github extends Command {
     const lines = [chalk.bold(`GitHub Activity Summary`), ''];
 
     // Add user info if available (for user activity searches)
-    if (userDetails) {
-      lines.push(chalk.blue(`User: ${userDetails.login}`));
+    if (userDetails && 'login' in userDetails) {
+      lines.push(chalk.blue(`User: ${(userDetails as GitHubUser).login}`));
       lines.push('');
     }
 
@@ -280,7 +305,9 @@ export default class Github extends Command {
 
         // Extract author with proper fallback priority
         const author =
-          commit.author?.login ??
+          (commit.author && 'login' in commit.author
+            ? (commit.author as GitHubUser).login
+            : null) ??
           commit.commit?.author?.name ??
           commit.commit?.author?.email ??
           'Unknown';
@@ -345,8 +372,12 @@ export default class Github extends Command {
           lines.push(chalk.dim(`     Repository: ${repoName}`));
         }
 
-        if (pr.user?.login) {
-          lines.push(chalk.dim(`     Author: ${pr.user.login}`));
+        if (pr.user && 'login' in pr.user && pr.user.login) {
+          lines.push(
+            chalk.dim(
+              `     Author: ${(pr.user as unknown as Record<string, unknown>).login}`
+            )
+          );
         }
         if (pr.labels && pr.labels.length > 0) {
           const labelNames = pr.labels
@@ -395,8 +426,12 @@ export default class Github extends Command {
           lines.push(chalk.dim(`     Repository: ${repoName}`));
         }
 
-        if (issue.user?.login) {
-          lines.push(chalk.dim(`     Author: ${issue.user.login}`));
+        if (issue.user && 'login' in issue.user && issue.user.login) {
+          lines.push(
+            chalk.dim(
+              `     Author: ${(issue.user as unknown as Record<string, unknown>).login}`
+            )
+          );
         }
         if (issue.labels && issue.labels.length > 0) {
           const labelNames = issue.labels

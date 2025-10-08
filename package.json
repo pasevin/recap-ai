@@ -41,13 +41,13 @@
     "build": "bun run build:all",
     "build:all": "bun run build:cli && bun run build:packages && bun run build:web",
     "build:cli": "tsc -b",
-    "build:packages": "cd packages/shared && npm run build && cd ../core && npm run build",
-    "build:web": "cd apps/web && npm run build",
+    "build:packages": "tsc -b packages/core packages/shared",
+    "build:web": "cd apps/web && bun run build",
     "build:check": "bun run build:check:cli && bun run build:check:packages && bun run build:check:web",
     "build:check:cli": "tsc --noEmit",
-    "build:check:packages": "cd packages/shared && npx tsc --noEmit && cd ../core && npx tsc --noEmit",
-    "build:check:web": "cd apps/web && npx tsc --noEmit",
-    "clean": "rimraf dist && cd packages/shared && npm run clean && cd ../core && npm run clean && cd apps/web && rm -rf .next",
+    "build:check:packages": "tsc -b packages/core packages/shared --force",
+    "build:check:web": "cd apps/web && bun x tsc --noEmit",
+    "clean": "rimraf dist && cd packages/shared && bun run clean && cd ../core && bun run clean && cd ../../apps/web && rm -rf .next",
     "clean:all": "bun run clean && cd apps/web && rm -rf node_modules && cd ../.. && rm -rf node_modules packages/*/node_modules apps/*/node_modules",
     "dev": "./bin/run.js",
     "dev:web": "cd apps/web && npm run dev",
@@ -60,10 +60,13 @@
     "mcp-server": "./bin/mcp-server.js",
     "postpack": "rimraf oclif.manifest.json",
     "prepack": "rimraf dist && bun run build:cli && oclif manifest",
-    "test": "bun test",
-    "test:all": "bun test && cd packages/shared && npm run test && cd ../core && npm run test",
-    "test:cli": "bun test",
-    "test:ci": "bun run test:cli --reporter=verbose --timeout=30000",
+    "test": "bun run test:packages && bun run test:cli && bun run test:web",
+    "test:all": "bun run test",
+    "test:packages": "cd packages/core && bun test && cd ../shared && bun test",
+    "test:cli": "cd apps/cli && bun test",
+    "test:web": "cd apps/web && bun test",
+    "test:web:ci": "cd apps/web && bun test --reporter=verbose",
+    "test:ci": "bun run test:packages && bun run test:cli && bun run test:web:ci",
     "prepare": "husky"
   },
   "engines": {
@@ -88,6 +91,8 @@
     "@oclif/plugin-plugins": "^4.0.0",
     "@oclif/plugin-version": "^2.0.0",
     "@octokit/rest": "^20.0.2",
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-switch": "^1.2.6",
     "chalk": "^5.4.1",
     "openai": "^5.10.1",
     "ora": "^8.1.1",
@@ -137,5 +142,8 @@
         "description": "Manage MCP server for agent integration"
       }
     }
-  }
+  },
+  "trustedDependencies": [
+    "unrs-resolver"
+  ]
 }
