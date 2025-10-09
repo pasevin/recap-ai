@@ -1,32 +1,75 @@
 <!-- markdownlint-disable MD041 MD003 -->
 
+---json
+{
+"normalization": {
+"listChildMarkers": [
+"Evidence:",
+"Behavior:",
+"Rating:",
+"Outcome:",
+"Impact:",
+"Action:",
+"Owner:",
+"When:",
+"Success criteria:",
+"Situation:",
+"Task:",
+"Result:",
+"Competency:"
+],
+"indentSpaces": 2,
+"onlyAfterTopLevelBullet": true
+}
+}
+
+---
+
 > **Review Period:** [INSERT EXACT DATE RANGE]
 
-## Summary of Impact
+## Outcomes vs Objectives
 
-[2–3 PARAGRAPHS: Most significant outcomes and why they mattered]
+- **[objective]** – Outcome: [what happened]
+  - Evidence: [(PR/issue refs, measurable result)]
+- **[objective]** – Outcome: [what happened]
+  - Evidence: [(links/metrics)]
 
-## Strengths (Behaviors & Evidence)
+## Competency Matrix
 
-- **[strength]** – [behavior]
+| Competency    | Rating (1–5) | Evidence                        |
+| ------------- | ------------ | ------------------------------- |
+| Impact        | [#]          | [one-liner with example/metric] |
+| Execution     | [#]          | [one-liner]                     |
+| Collaboration | [#]          | [one-liner]                     |
+| Craftsmanship | [#]          | [one-liner]                     |
+| Ownership     | [#]          | [one-liner]                     |
+
+## STAR Stories (2–3)
+
+- **[story title]**
+  - Situation: [context]
+  - Task: [goal]
+  - Action: [what you did]
+  - Result: [measurable outcome]
   - Evidence: [(PR: [#123](https://...)) or issue refs]
-- **[strength]** – [behavior]
-  - Evidence: [(PR: [#123](https://...)) or issue refs]
 
-## Growth Areas (Plan & Evidence)
+## Feedback Received → Actions
 
-- **[growth area]** – [what to improve]
-  - Plan: [specific actions]
-  - Evidence: [context/examples]
+- **[feedback theme]** – [short note]
+  - Action: [what you’ll change]
+  - Owner: [you/partner]
+  - When: [timeframe]
 
-## Collaboration & Leadership
+## Growth Plan (SMART Goals)
 
-- **[example]** – [cross-team impact, mentorship, decision quality]
+- **[goal]** – Success criteria: [how we’ll measure it]
+  - Action: [first step]
+  - When: [target date]
 
-## Goals for Next Period
+## Collaboration & Leadership Highlights
 
-- **[goal]** – [success criteria]
-- **[goal]** – [success criteria]
+- **[example]** – Impact: [mentorship/cross-team/decision]
+  - Evidence: [(link/ref)]
 
 ---
 

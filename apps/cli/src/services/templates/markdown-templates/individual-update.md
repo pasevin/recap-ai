@@ -1,30 +1,72 @@
 <!-- markdownlint-disable MD041 MD003 -->
 
+---json
+{
+"normalization": {
+"listChildMarkers": [
+"Why it mattered:",
+"Impact:",
+"Evidence:",
+"Owner:",
+"Ask:",
+"Status:",
+"Outcome:",
+"Next step:",
+"Reason:",
+"Percent:"
+],
+"indentSpaces": 2,
+"onlyAfterTopLevelBullet": true
+}
+}
+
+---
+
 > **Timeline:** [INSERT EXACT DATE RANGE]
 >
 > **Focus Areas:** [INSERT 2–4 THEMES]
 
-## Highlights
+## Personal Highlights
 
-- **[theme #1]** – [what shipped/achieved]
-- **[theme #2]** – [what shipped/achieved]
+- **[theme/work item]** – [concise description]
+  - Why it mattered: [link to business/customer/technical impact]
+  - Evidence: [(PR: [#123](https://...)) or issue refs]
+- **[theme/work item]** – [concise description]
+  - Why it mattered: [impact]
+  - Evidence: [(PR/issue refs)]
 
-## In Progress
+## Time Allocation
 
-- **[work item]** – [status]
-- **[work item]** – [status]
+- Deep Work – Percent: [xx%]
+- Coordination – Percent: [xx%]
+- Other – Percent: [xx%]
 
-## Next Period Priorities
+## Work You’re Proud Of
 
-- **[priority]** – [expected outcome]
+- **[PR/Issue title]** – [brief technical note]
+  - Impact: [what improved]
+  - Evidence: [(PR: [#123](https://...))]
 
-## Blockers & Risks
+## Learnings & Experiments
 
-- **[blocker]** – [owner/ask]
+- **[topic]** – [what you tried or learned]
+  - Outcome: [result]
+  - Next step: [follow-up]
 
-## Learnings & Insights
+## Blockers & Asks
 
-- [brief learning or insight]
+- **[blocked item]** – [short description]
+  - Owner: [name/team]
+  - Ask: [what you need]
+  - Status: [pending/in progress/unblocked]
+
+## Shout‑outs
+
+- **[person/team]** – Reason: [collaboration/mentorship/support]
+
+## Next Period Big Rocks
+
+- **[priority]** – Outcome: [expected result]
 
 ---
 
