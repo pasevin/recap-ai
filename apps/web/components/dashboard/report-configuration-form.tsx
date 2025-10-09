@@ -302,6 +302,16 @@ export function ReportConfigurationForm({
                 )}
               </SelectContent>
             </Select>
+            {!templatesLoading ? (
+              <p className="text-xs text-muted-foreground">
+                {(availableTemplates.find((t) => t.id === templateId)
+                  ?.description ??
+                  (templateId === 'default-standup-v1'
+                    ? 'Comprehensive standup summary for engineering teams'
+                    : undefined)) ||
+                  ' '}
+              </p>
+            ) : null}
           </div>
 
           {/* Time Range */}
